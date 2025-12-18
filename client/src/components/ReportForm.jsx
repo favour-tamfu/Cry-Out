@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MapPin, Send, Check } from "lucide-react";
+import { MapPin, Send, Check, Camera, Paperclip } from "lucide-react";
 
 export default function ReportForm({
   onSubmit,
@@ -9,8 +9,12 @@ export default function ReportForm({
 }) {
   const [location, setLocation] = useState(null);
   const [loadingLoc, setLoadingLoc] = useState(false);
-  // NEW: Track consent reliably with State
   const [consent, setConsent] = useState(false);
+  const [files, setFiles] = useState([]); // Store selected files
+
+  const handleFileChange = (e) => {
+    setFiles(Array.from(e.target.files));
+  };
 
   const handleGetLocation = () => {
     setLoadingLoc(true);
@@ -26,19 +30,10 @@ export default function ReportForm({
           setLoadingLoc(false);
         },
         (error) => {
-          console.error("Error getting location:", error);
-          alert("Could not get location. Please allow permissions.");
+          alert("Could not get location.");
           setLoadingLoc(false);
         },
-
-        // --- THE FIX: FORCE HIGH ACCURACY ---
-        {
-          enableHighAccuracy: true, // Use GPS, not Wi-Fi
-          timeout: 10000, // Wait up to 10 seconds for a lock
-          maximumAge: 0, // Do not use cached/old positions
-        }
-        // ------------------------------------
-        
+        { enableHighAccuracy: true }
       );
     } else {
       alert("Geolocation is not supported.");
@@ -48,8 +43,8 @@ export default function ReportForm({
 
   const handleSubmitWithLoc = (e) => {
     e.preventDefault();
-    // Pass the state variable 'consent' which is guaranteed to be true/false
-    onSubmit(e, location, consent);
+    // Pass everything up: Event, Location, Consent, Files
+    onSubmit(e, location, consent, files);
   };
 
   return (
@@ -82,6 +77,33 @@ export default function ReportForm({
           ></textarea>
         </div>
 
+        {/* --- EVIDENCE UPLOAD SECTION --- */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Evidence (Optional)
+          </label>
+          <div className="relative border-dashed border-2 border-gray-300 rounded-lg p-4 hover:bg-gray-50 transition-colors text-center cursor-pointer">
+            <input
+              type="file"
+              multiple
+              accept="image/*,audio/*,video/*"
+              onChange={handleFileChange}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            />
+            <div className="flex flex-col items-center justify-center gap-1 text-gray-500">
+              <Camera size={24} />
+              <span className="text-sm">Tap to attach photos or audio</span>
+            </div>
+          </div>
+          {files.length > 0 && (
+            <div className="mt-2 text-sm text-blue-600 font-medium flex items-center gap-1">
+              <Paperclip size={14} />
+              {files.length} file(s) attached
+            </div>
+          )}
+        </div>
+        {/* ------------------------------- */}
+
         {!location ? (
           <button
             type="button"
@@ -102,14 +124,10 @@ export default function ReportForm({
         ) : (
           <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 p-3 rounded-lg w-full border border-green-200">
             <Check size={18} />
-            <span>
-              Location Attached ({location.lat.toFixed(4)},{" "}
-              {location.lng.toFixed(4)})
-            </span>
+            <span>Location Attached</span>
           </div>
         )}
 
-        {/* POLICE CONSENT CHECKBOX (Updated) */}
         <div
           className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
             consent ? "bg-red-100 border-red-300" : "bg-red-50 border-red-100"
@@ -117,15 +135,11 @@ export default function ReportForm({
         >
           <input
             type="checkbox"
-            id="policeConsent"
-            className="mt-1 w-5 h-5 text-red-600 rounded border-gray-300 focus:ring-red-500 cursor-pointer"
             checked={consent}
-            onChange={(e) => setConsent(e.target.checked)} // Update State directly
+            onChange={(e) => setConsent(e.target.checked)}
+            className="mt-1 w-5 h-5 text-red-600 rounded border-gray-300 focus:ring-red-500 cursor-pointer"
           />
-          <label
-            htmlFor="policeConsent"
-            className="text-sm text-gray-700 cursor-pointer select-none"
-          >
+          <label className="text-sm text-gray-700">
             <span className="font-bold text-red-700 block mb-1">
               Alert Law Enforcement?
             </span>

@@ -16,23 +16,33 @@ function VictimApp() {
   const quickExit = () => (window.location.href = "https://www.google.com");
 
   // Handle Form Submission
-  const handleSubmit = async (e, locationData, policeConsent) => {
+  const handleSubmit = async (e, locationData, policeConsent, files) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const formData = {
-      category: selectedCategory,
-      description: e.target.description.value,
-      location: locationData || { lat: 0, lng: 0, address: "Not provided" },
-      contactPolice: policeConsent, // Send the User's Choice
-    };
+    // 1. Prepare the Package (FormData)
+    const formData = new FormData();
+    formData.append("category", selectedCategory);
+    formData.append("description", e.target.description.value);
+    formData.append("contactPolice", policeConsent);
+
+    // Location needs to be a string
+    const loc = locationData || { lat: 0, lng: 0, address: "Not provided" };
+    formData.append("location", JSON.stringify(loc));
+
+    // 2. Add Files to Package
+    if (files && files.length > 0) {
+      for (let i = 0; i < files.length; i++) {
+        formData.append("evidence", files[i]);
+      }
+    }
 
     try {
       await axios.post("http://localhost:3001/api/reports", formData);
-      setStep(3); // Move to success screen
+      setStep(3);
     } catch (error) {
       console.error(error);
-      alert("Failed to send report. Please check your connection.");
+      alert("Failed to send report.");
     } finally {
       setIsSubmitting(false);
     }
