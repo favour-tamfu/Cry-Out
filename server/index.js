@@ -30,7 +30,7 @@ const storage = new CloudinaryStorage({
   cloudinary: cloudinary, // Pass the ROOT object
   params: {
     folder: "cryout-evidence",
-    allowed_formats: ["jpg", "png", "jpeg", "mp3", "wav", "mp4", "m4a"],
+    allowed_formats: ["jpg", "png", "jpeg", "mp3", "wav","webm", "mp4", "m4a","opus","ogg"],
     resource_type: "auto",
   },
 });

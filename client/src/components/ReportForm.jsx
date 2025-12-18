@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { MapPin, Send, Check, Camera, Paperclip } from "lucide-react";
+import { MapPin, Send, Check, Camera, Video, Paperclip, X } from "lucide-react";
+import AudioRecorder from "./AudioRecorder"; // Import new component
 
 export default function ReportForm({
   onSubmit,
@@ -10,10 +11,24 @@ export default function ReportForm({
   const [location, setLocation] = useState(null);
   const [loadingLoc, setLoadingLoc] = useState(false);
   const [consent, setConsent] = useState(false);
-  const [files, setFiles] = useState([]); // Store selected files
+  const [files, setFiles] = useState([]);
 
-  const handleFileChange = (e) => {
-    setFiles(Array.from(e.target.files));
+  // Add new files to the existing list
+  const handleFileAdd = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setFiles((prev) => [...prev, ...Array.from(e.target.files)]);
+    }
+  };
+
+  // Add audio file from recorder
+  const handleAudioAdd = (audioFile) => {
+    if (audioFile) {
+      setFiles((prev) => [...prev, audioFile]);
+    }
+  };
+
+  const removeFile = (index) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleGetLocation = () => {
@@ -21,35 +36,33 @@ export default function ReportForm({
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const locData = {
+          setLocation({
             lat: position.coords.latitude,
             lng: position.coords.longitude,
             address: "GPS Coordinates Attached",
-          };
-          setLocation(locData);
+          });
           setLoadingLoc(false);
         },
-        (error) => {
-          alert("Could not get location.");
+        () => {
+          alert("Location failed.");
           setLoadingLoc(false);
         },
         { enableHighAccuracy: true }
       );
     } else {
-      alert("Geolocation is not supported.");
       setLoadingLoc(false);
     }
   };
 
   const handleSubmitWithLoc = (e) => {
     e.preventDefault();
-    // Pass everything up: Event, Location, Consent, Files
     onSubmit(e, location, consent, files);
   };
 
   return (
     <div className="space-y-4 animate-slide-up">
-      <div className="flex items-center gap-2 mb-4">
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-2">
         <button
           onClick={onBack}
           className="text-gray-400 text-sm hover:text-gray-600 font-medium"
@@ -61,49 +74,92 @@ export default function ReportForm({
         </span>
       </div>
 
-      <h2 className="text-xl font-bold text-gray-800">Details</h2>
-
       <form onSubmit={handleSubmitWithLoc} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            What happened?
-          </label>
-          <textarea
-            name="description"
-            required
-            rows="4"
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none bg-gray-50"
-            placeholder="Please describe the situation..."
-          ></textarea>
-        </div>
+        <textarea
+          name="description"
+          required
+          rows="3"
+          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none bg-gray-50"
+          placeholder="What is happening?"
+        ></textarea>
 
-        {/* --- EVIDENCE UPLOAD SECTION --- */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Evidence (Optional)
-          </label>
-          <div className="relative border-dashed border-2 border-gray-300 rounded-lg p-4 hover:bg-gray-50 transition-colors text-center cursor-pointer">
+        {/* --- NEW MEDIA TOOLS --- */}
+        <div className="space-y-3">
+          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+            Quick Evidence
+          </h3>
+
+          <div className="grid grid-cols-2 gap-3">
+            {/* 1. CAMERA BUTTON */}
+            <label className="flex flex-col items-center justify-center p-4 border border-gray-200 rounded-xl bg-white hover:bg-gray-50 cursor-pointer shadow-sm transition-all active:scale-95">
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment" // Forces Camera on Mobile
+                className="hidden"
+                onChange={handleFileAdd}
+              />
+              <Camera className="text-blue-600 mb-1" size={24} />
+              <span className="text-xs font-bold text-gray-600">
+                Take Photo
+              </span>
+            </label>
+
+            {/* 2. VIDEO BUTTON */}
+            <label className="flex flex-col items-center justify-center p-4 border border-gray-200 rounded-xl bg-white hover:bg-gray-50 cursor-pointer shadow-sm transition-all active:scale-95">
+              <input
+                type="file"
+                accept="video/*"
+                capture="environment" // Forces Camera on Mobile
+                className="hidden"
+                onChange={handleFileAdd}
+              />
+              <Video className="text-red-500 mb-1" size={24} />
+              <span className="text-xs font-bold text-gray-600">
+                Record Video
+              </span>
+            </label>
+          </div>
+
+          {/* 3. AUDIO RECORDER */}
+          <AudioRecorder onRecordingComplete={handleAudioAdd} />
+
+          {/* 4. ATTACH FILE (Old Method) */}
+          <label className="flex items-center justify-center gap-2 w-full p-2 border-dashed border-2 border-gray-200 rounded-lg text-gray-400 text-sm hover:bg-gray-50 cursor-pointer">
+            <Paperclip size={16} />
+            <span>Or upload existing file</span>
             <input
               type="file"
               multiple
-              accept="image/*,audio/*,video/*"
-              onChange={handleFileChange}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              className="hidden"
+              onChange={handleFileAdd}
             />
-            <div className="flex flex-col items-center justify-center gap-1 text-gray-500">
-              <Camera size={24} />
-              <span className="text-sm">Tap to attach photos or audio</span>
-            </div>
-          </div>
+          </label>
+
+          {/* FILE LIST PREVIEW */}
           {files.length > 0 && (
-            <div className="mt-2 text-sm text-blue-600 font-medium flex items-center gap-1">
-              <Paperclip size={14} />
-              {files.length} file(s) attached
+            <div className="flex flex-wrap gap-2 pt-2">
+              {files.map((file, idx) => (
+                <div
+                  key={idx}
+                  className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-md flex items-center gap-1 border border-gray-200"
+                >
+                  <span className="max-w-[100px] truncate">{file.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(idx)}
+                    className="hover:text-red-500"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </div>
-        {/* ------------------------------- */}
+        {/* ----------------------- */}
 
+        {/* Location & Consent (Same as before) */}
         {!location ? (
           <button
             type="button"
@@ -117,9 +173,7 @@ export default function ReportForm({
                 loadingLoc ? "animate-bounce text-blue-500" : "text-red-500"
               }
             />
-            <span>
-              {loadingLoc ? "Locating you..." : "Attach my location (Optional)"}
-            </span>
+            <span>{loadingLoc ? "Locating..." : "Attach Location"}</span>
           </button>
         ) : (
           <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 p-3 rounded-lg w-full border border-green-200">
@@ -137,20 +191,20 @@ export default function ReportForm({
             type="checkbox"
             checked={consent}
             onChange={(e) => setConsent(e.target.checked)}
-            className="mt-1 w-5 h-5 text-red-600 rounded border-gray-300 focus:ring-red-500 cursor-pointer"
+            className="mt-1 w-5 h-5 text-red-600 rounded focus:ring-red-500"
           />
           <label className="text-sm text-gray-700">
             <span className="font-bold text-red-700 block mb-1">
               Alert Law Enforcement?
             </span>
-            Check this <b>only</b> if you want immediate police intervention.
+            Check only for immediate danger.
           </label>
         </div>
 
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg mt-4 disabled:bg-gray-400"
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg disabled:bg-gray-400"
         >
           <Send size={20} />
           {isSubmitting ? "Sending..." : "Submit Report"}
