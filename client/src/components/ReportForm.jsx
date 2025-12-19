@@ -1,6 +1,19 @@
-import { useState } from "react";
-import { MapPin, Send, Check, Camera, Video, Paperclip, X } from "lucide-react";
-import AudioRecorder from "./AudioRecorder"; // Import new component
+import { useState, useEffect } from "react";
+import axios from "axios";
+import {
+  MapPin,
+  Send,
+  Check,
+  Camera,
+  Video,
+  X,
+  ShieldAlert,
+  Info,
+  Siren,
+  Calendar,
+} from "lucide-react";
+import AudioRecorder from "./AudioRecorder";
+import SearchableDropdown from "./SearchableDropdown"; // Import the new component
 
 export default function ReportForm({
   onSubmit,
@@ -9,59 +22,96 @@ export default function ReportForm({
   isSubmitting,
 }) {
   const [location, setLocation] = useState(null);
-  const [loadingLoc, setLoadingLoc] = useState(false);
+  const [locationError, setLocationError] = useState(false);
   const [consent, setConsent] = useState(false);
   const [files, setFiles] = useState([]);
 
-  // Add new files to the existing list
-  const handleFileAdd = (e) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setFiles((prev) => [...prev, ...Array.from(e.target.files)]);
-    }
-  };
+  // Contact State
+  const [contactMethod, setContactMethod] = useState("NONE");
+  const [contactValue, setContactValue] = useState("");
+  const [countryCode, setCountryCode] = useState("+237"); // Default
+  const [countryList, setCountryList] = useState([]);
 
-  // Add audio file from recorder
-  const handleAudioAdd = (audioFile) => {
-    if (audioFile) {
-      setFiles((prev) => [...prev, audioFile]);
-    }
-  };
+  const [safeTime, setSafeTime] = useState("");
+  const [safeVoicemail, setSafeVoicemail] = useState(false);
+  const [requestImmediate, setRequestImmediate] = useState(false);
 
-  const removeFile = (index) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
-  };
+  // --- 1. FETCH COUNTRY CODES ---
+  useEffect(() => {
+    const fetchCodes = async () => {
+      try {
+        const res = await axios.get(
+          "https://restcountries.com/v3.1/all?fields=name,idd,cca2"
+        );
+        const formatted = res.data
+          .filter((c) => c.idd.root)
+          .map((c) => ({
+            name: c.name.common,
+            code: c.cca2,
+            dial_code: c.idd.root + (c.idd.suffixes ? c.idd.suffixes[0] : ""),
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name));
 
-  const handleGetLocation = () => {
-    setLoadingLoc(true);
+        setCountryList(formatted);
+      } catch (err) {
+        console.error("Failed to load codes", err);
+        setCountryList([
+          { name: "Cameroon", dial_code: "+237" },
+          { name: "USA", dial_code: "+1" },
+        ]);
+      }
+    };
+    fetchCodes();
+  }, []);
+
+  // --- 2. AUTO LOCATION ---
+  useEffect(() => {
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-            address: "GPS Coordinates Attached",
-          });
-          setLoadingLoc(false);
+        (pos) => {
+          setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+          setLocationError(false);
         },
-        () => {
-          alert("Location failed.");
-          setLoadingLoc(false);
-        },
+        () => setLocationError(true),
         { enableHighAccuracy: true }
       );
-    } else {
-      setLoadingLoc(false);
-    }
+    } else setLocationError(true);
+  }, []);
+
+  const handleFileAdd = (e) => {
+    if (e.target.files)
+      setFiles((prev) => [...prev, ...Array.from(e.target.files)]);
   };
+  const handleAudioAdd = (file) => {
+    if (file) setFiles((prev) => [...prev, file]);
+  };
+  const removeFile = (idx) =>
+    setFiles((prev) => prev.filter((_, i) => i !== idx));
 
   const handleSubmitWithLoc = (e) => {
     e.preventDefault();
-    onSubmit(e, location, consent, files);
+    if (!location) {
+      alert("Location is required.");
+      return;
+    }
+
+    let finalContactValue = contactValue;
+    if (contactMethod === "PHONE") {
+      finalContactValue = `${countryCode} ${contactValue}`;
+    }
+
+    const contactData = {
+      method: contactMethod,
+      value: finalContactValue,
+      safeTime: requestImmediate ? "ASAP" : safeTime,
+      safeToVoicemail: safeVoicemail,
+      immediateHelp: requestImmediate,
+    };
+    onSubmit(e, location, consent, files, contactData);
   };
 
   return (
-    <div className="space-y-4 animate-slide-up">
-      {/* Header */}
+    <div className="space-y-4 animate-slide-up pb-10">
       <div className="flex items-center gap-2 mb-2">
         <button
           onClick={onBack}
@@ -74,82 +124,68 @@ export default function ReportForm({
         </span>
       </div>
 
+      <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
+        <div className="flex items-center gap-2 text-blue-800 text-sm font-bold mb-1">
+          <ShieldAlert size={16} /> Safety Tips
+        </div>
+        <p className="text-xs text-blue-700 leading-relaxed opacity-90">
+          {selectedCategory === "Domestic Violence"
+            ? "Stay near an exit. Keep phone silent."
+            : "Trust your instincts. If unsafe, leave."}
+        </p>
+      </div>
+
       <form onSubmit={handleSubmitWithLoc} className="space-y-4">
-        <textarea
-          name="description"
-          required
-          rows="3"
-          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none bg-gray-50"
-          placeholder="What is happening?"
-        ></textarea>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wide">
+            <Info size={14} /> Report Guide
+          </div>
+          <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-200">
+            Please mention: <b>Names</b>, <b>Relationship</b>, and <b>Dates</b>{" "}
+            if possible.
+          </div>
+          <textarea
+            name="description"
+            required
+            rows="4"
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none text-sm"
+            placeholder="Describe the incident here..."
+          ></textarea>
+        </div>
 
-        {/* --- NEW MEDIA TOOLS --- */}
         <div className="space-y-3">
-          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-            Quick Evidence
-          </h3>
-
           <div className="grid grid-cols-2 gap-3">
-            {/* 1. CAMERA BUTTON */}
-            <label className="flex flex-col items-center justify-center p-4 border border-gray-200 rounded-xl bg-white hover:bg-gray-50 cursor-pointer shadow-sm transition-all active:scale-95">
+            <label className="flex flex-col items-center p-3 border rounded-xl hover:bg-gray-50 cursor-pointer text-gray-600 text-xs font-bold">
               <input
                 type="file"
                 accept="image/*"
-                capture="environment" // Forces Camera on Mobile
+                capture="environment"
                 className="hidden"
                 onChange={handleFileAdd}
               />
-              <Camera className="text-blue-600 mb-1" size={24} />
-              <span className="text-xs font-bold text-gray-600">
-                Take Photo
-              </span>
+              <Camera size={20} className="mb-1 text-blue-500" /> Take Photo
             </label>
-
-            {/* 2. VIDEO BUTTON */}
-            <label className="flex flex-col items-center justify-center p-4 border border-gray-200 rounded-xl bg-white hover:bg-gray-50 cursor-pointer shadow-sm transition-all active:scale-95">
+            <label className="flex flex-col items-center p-3 border rounded-xl hover:bg-gray-50 cursor-pointer text-gray-600 text-xs font-bold">
               <input
                 type="file"
                 accept="video/*"
-                capture="environment" // Forces Camera on Mobile
+                capture="environment"
                 className="hidden"
                 onChange={handleFileAdd}
               />
-              <Video className="text-red-500 mb-1" size={24} />
-              <span className="text-xs font-bold text-gray-600">
-                Record Video
-              </span>
+              <Video size={20} className="mb-1 text-red-500" /> Record Video
             </label>
           </div>
-
-          {/* 3. AUDIO RECORDER */}
           <AudioRecorder onRecordingComplete={handleAudioAdd} />
-
-          {/* 4. ATTACH FILE (Old Method) */}
-          <label className="flex items-center justify-center gap-2 w-full p-2 border-dashed border-2 border-gray-200 rounded-lg text-gray-400 text-sm hover:bg-gray-50 cursor-pointer">
-            <Paperclip size={16} />
-            <span>Or upload existing file</span>
-            <input
-              type="file"
-              multiple
-              className="hidden"
-              onChange={handleFileAdd}
-            />
-          </label>
-
-          {/* FILE LIST PREVIEW */}
           {files.length > 0 && (
-            <div className="flex flex-wrap gap-2 pt-2">
-              {files.map((file, idx) => (
+            <div className="flex flex-wrap gap-2">
+              {files.map((f, i) => (
                 <div
-                  key={idx}
-                  className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-md flex items-center gap-1 border border-gray-200"
+                  key={i}
+                  className="bg-gray-100 text-xs px-2 py-1 rounded border flex gap-1"
                 >
-                  <span className="max-w-[100px] truncate">{file.name}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeFile(idx)}
-                    className="hover:text-red-500"
-                  >
+                  {f.name.slice(0, 10)}...{" "}
+                  <button type="button" onClick={() => removeFile(i)}>
                     <X size={12} />
                   </button>
                 </div>
@@ -157,57 +193,207 @@ export default function ReportForm({
             </div>
           )}
         </div>
-        {/* ----------------------- */}
-
-        {/* Location & Consent (Same as before) */}
-        {!location ? (
-          <button
-            type="button"
-            onClick={handleGetLocation}
-            disabled={loadingLoc}
-            className="flex items-center gap-2 text-sm text-gray-600 bg-white p-3 rounded-lg w-full border border-gray-200 hover:bg-gray-50 transition-colors"
-          >
-            <MapPin
-              size={18}
-              className={
-                loadingLoc ? "animate-bounce text-blue-500" : "text-red-500"
-              }
-            />
-            <span>{loadingLoc ? "Locating..." : "Attach Location"}</span>
-          </button>
-        ) : (
-          <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 p-3 rounded-lg w-full border border-green-200">
-            <Check size={18} />
-            <span>Location Attached</span>
-          </div>
-        )}
 
         <div
-          className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
-            consent ? "bg-red-100 border-red-300" : "bg-red-50 border-red-100"
+          className={`p-3 rounded-lg flex items-center gap-3 text-sm font-medium border ${
+            location
+              ? "bg-green-50 border-green-200 text-green-800"
+              : "bg-red-50 border-red-200 text-red-800"
           }`}
         >
-          <input
-            type="checkbox"
-            checked={consent}
-            onChange={(e) => setConsent(e.target.checked)}
-            className="mt-1 w-5 h-5 text-red-600 rounded focus:ring-red-500"
-          />
-          <label className="text-sm text-gray-700">
-            <span className="font-bold text-red-700 block mb-1">
-              Alert Law Enforcement?
+          {location ? (
+            <>
+              <Check size={20} className="text-green-600" />
+              <span>Location Automatically Secured</span>
+            </>
+          ) : (
+            <>
+              <MapPin size={20} className="animate-pulse" />
+              <span>
+                {locationError
+                  ? "Location Required. Allow GPS."
+                  : "Acquiring GPS..."}
+              </span>
+            </>
+          )}
+        </div>
+
+        <div className="border-t border-gray-100 pt-4 space-y-3">
+          <h3 className="text-sm font-bold text-gray-700">
+            Can we contact you?
+          </h3>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setContactMethod("PHONE")}
+              className={`flex-1 py-2 text-xs font-bold rounded-lg border ${
+                contactMethod === "PHONE"
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-gray-500"
+              }`}
+            >
+              Phone
+            </button>
+            <button
+              type="button"
+              onClick={() => setContactMethod("EMAIL")}
+              className={`flex-1 py-2 text-xs font-bold rounded-lg border ${
+                contactMethod === "EMAIL"
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-gray-500"
+              }`}
+            >
+              Email
+            </button>
+            <button
+              type="button"
+              onClick={() => setContactMethod("NONE")}
+              className={`flex-1 py-2 text-xs font-bold rounded-lg border ${
+                contactMethod === "NONE"
+                  ? "bg-gray-800 text-white border-gray-800"
+                  : "bg-white text-gray-500"
+              }`}
+            >
+              No
+            </button>
+          </div>
+
+          {contactMethod !== "NONE" && (
+            <div className="space-y-4 bg-gray-50 p-4 rounded-lg border border-gray-200 animate-fade-in">
+              {/* PHONE WITH SEARCHABLE CODE */}
+              {contactMethod === "PHONE" ? (
+                <div className="flex">
+                  {/* Custom Searchable Dropdown */}
+                  <SearchableDropdown
+                    options={countryList}
+                    value={countryCode}
+                    onChange={setCountryCode}
+                    placeholder="+..."
+                  />
+                  {/* Phone Input */}
+                  <input
+                    type="tel"
+                    placeholder="Phone Number"
+                    className="flex-1 p-2 border border-l-0 rounded-r-lg text-sm outline-none focus:ring-1 focus:ring-blue-500"
+                    value={contactValue}
+                    onChange={(e) => setContactValue(e.target.value)}
+                    required
+                  />
+                </div>
+              ) : (
+                <input
+                  type="email"
+                  placeholder="Safe Email Address"
+                  className="w-full p-2 border rounded text-sm"
+                  value={contactValue}
+                  onChange={(e) => setContactValue(e.target.value)}
+                  required
+                />
+              )}
+
+              <div
+                className={`flex items-center gap-2 p-3 rounded border transition-colors ${
+                  requestImmediate
+                    ? "bg-red-100 border-red-300 text-red-900"
+                    : "bg-white border-gray-300"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  id="immediate"
+                  checked={requestImmediate}
+                  onChange={(e) => setRequestImmediate(e.target.checked)}
+                  className="w-5 h-5 text-red-600 rounded cursor-pointer"
+                />
+                <label
+                  htmlFor="immediate"
+                  className="text-xs font-bold cursor-pointer"
+                >
+                  Request Immediate Callback?
+                </label>
+              </div>
+
+              <div
+                className={`transition-opacity ${
+                  requestImmediate
+                    ? "opacity-50 pointer-events-none"
+                    : "opacity-100"
+                }`}
+              >
+                <label className="text-xs text-gray-500 block mb-1 flex items-center gap-1">
+                  <Calendar size={12} />{" "}
+                  {requestImmediate
+                    ? "We will contact you ASAP"
+                    : "Select best date & time to call:"}
+                </label>
+                <input
+                  type="datetime-local"
+                  disabled={requestImmediate}
+                  className="w-full p-2 border rounded text-sm text-gray-600 disabled:bg-gray-200"
+                  value={safeTime}
+                  onChange={(e) => setSafeTime(e.target.value)}
+                />
+              </div>
+
+              {contactMethod === "PHONE" && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="vm"
+                    checked={safeVoicemail}
+                    onChange={(e) => setSafeVoicemail(e.target.checked)}
+                  />
+                  <label htmlFor="vm" className="text-xs text-gray-600">
+                    Safe to leave voicemail?
+                  </label>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div
+          className={`flex items-start gap-3 p-4 rounded-xl border-2 transition-colors cursor-pointer ${
+            consent
+              ? "bg-red-50 border-red-500 shadow-sm"
+              : "bg-white border-gray-200"
+          }`}
+          onClick={() => setConsent(!consent)}
+        >
+          <div
+            className={`mt-1 w-5 h-5 rounded border flex items-center justify-center ${
+              consent
+                ? "bg-red-600 border-red-600 text-white"
+                : "border-gray-400"
+            }`}
+          >
+            {consent && <Check size={14} />}
+          </div>
+          <div>
+            <span className="font-bold text-gray-800 block text-sm flex items-center gap-2">
+              <Siren
+                size={16}
+                className={consent ? "text-red-600" : "text-gray-400"}
+              />{" "}
+              Involve Law Enforcement?
             </span>
-            Check only for immediate danger.
-          </label>
+            <p className="text-xs text-gray-500 mt-1">
+              Check <b>only</b> if you are in immediate danger.
+            </p>
+          </div>
         </div>
 
         <button
           type="submit"
-          disabled={isSubmitting}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg disabled:bg-gray-400"
+          disabled={isSubmitting || !location}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg mt-4 disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
-          <Send size={20} />
-          {isSubmitting ? "Sending..." : "Submit Report"}
+          <Send size={20} />{" "}
+          {isSubmitting
+            ? "Sending..."
+            : location
+            ? "Submit Report"
+            : "Waiting for GPS..."}
         </button>
       </form>
     </div>

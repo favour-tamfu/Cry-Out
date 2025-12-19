@@ -59,6 +59,9 @@ app.post("/api/reports", upload.array("evidence"), async (req, res) => {
       location: req.body.location
         ? JSON.parse(req.body.location)
         : { lat: 0, lng: 0, address: "Not provided" },
+      
+        //Parse Contact Info
+      contactInfo: req.body.contactInfo ? JSON.parse(req.body.contactInfo) : {},
 
       // --- THE FIX IS HERE ---
       // Checks multiple properties to find the real URL
@@ -108,6 +111,39 @@ app.get("/api/org-reports/:orgId", async (req, res) => {
   } catch (err) {
     res.status(500).json(err);
   }
+});
+
+
+// --- CLAIM REPORT ROUTE ---
+app.put('/api/reports/:id/claim', async (req, res) => {
+    try {
+        const { orgId, orgName } = req.body;
+        
+        // 1. Find the report
+        const report = await Report.findById(req.params.id);
+        if (!report) return res.status(404).json({ message: "Report not found" });
+        
+        // 2. Check if already claimed
+        if (report.assignedTo && report.assignedTo.orgId) {
+            return res.status(400).json({ message: "Report already claimed by another agency" });
+        }
+
+        // 3. Update the report
+        report.status = 'In Progress';
+        report.assignedTo = {
+            orgId: orgId,
+            orgName: orgName,
+            claimedAt: new Date()
+        };
+        
+        const updatedReport = await report.save();
+        res.json(updatedReport);
+        console.log(`🛡️ Case ${report._id} claimed by ${orgName}`);
+
+    } catch (err) {
+        console.error("Claim Error:", err);
+        res.status(500).json(err);
+    }
 });
 
 const PORT = process.env.PORT || 3001;

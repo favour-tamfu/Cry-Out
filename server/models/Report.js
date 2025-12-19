@@ -12,10 +12,7 @@ const ReportSchema = new mongoose.Schema({
       "Other",
     ],
   },
-  description: {
-    type: String,
-    required: true,
-  },
+  description: { type: String, required: true },
   media: [String],
 
   location: {
@@ -24,21 +21,31 @@ const ReportSchema = new mongoose.Schema({
     address: String,
   },
 
-  //To choose whether to involve police
-  contactPolice: {
-    type: Boolean,
-    default: false, // Default is NO police
-  },
+  contactPolice: { type: Boolean, default: false },
 
+  // --- NEW: SAFE CONTACT INFO ---
+  contactInfo: {
+    method: { type: String, enum: ["PHONE", "EMAIL", "NONE"], default: "NONE" },
+    value: String, // The actual number or email
+    safeToVoicemail: { type: Boolean, default: false },
+    safeTimes: String, // e.g. "9am-5pm only"
+  },
+  // ------------------------------
+
+  // --- NEW FIELDS FOR CASE MANAGEMENT ---
   status: {
     type: String,
     default: "Pending",
-    enum: ["Pending", "Reviewed", "Action Taken"],
+    enum: ["Pending", "In Progress", "Resolved"],
   },
-  createdAt: {
-    type: Date,
-    default: Date.now,
+  assignedTo: {
+    orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization" },
+    orgName: String,
+    claimedAt: Date,
   },
+  // --------------------------------------
+
+  createdAt: { type: Date, default: Date.now },
 });
 
 module.exports = mongoose.model("Report", ReportSchema);

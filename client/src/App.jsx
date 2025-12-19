@@ -6,6 +6,7 @@ import CategorySelect from "./components/CategorySelect";
 import ReportForm from "./components/ReportForm";
 import ResponderLogin from "./components/ResponderLogin";
 import AdminDashboard from "./components/AdminDashboard";
+import SafetyAdvisor from "./components/SafetyAdvisor";
 
 // --- THE VICTIM APP COMPONENT ---
 function VictimApp() {
@@ -16,25 +17,30 @@ function VictimApp() {
   const quickExit = () => (window.location.href = "https://www.google.com");
 
   // Handle Form Submission
-  const handleSubmit = async (e, locationData, policeConsent, files) => {
+ // Updated Handle Submit
+  const handleSubmit = async (e, locationData, policeConsent, files,
+    contactData ) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // 1. Prepare the Package (FormData)
     const formData = new FormData();
     formData.append("category", selectedCategory);
     formData.append("description", e.target.description.value);
     formData.append("contactPolice", policeConsent);
+    formData.append(
+      "location",
+      JSON.stringify(
+        locationData || { lat: 0, lng: 0, address: "Not provided" }
+      )
+    );
 
-    // Location needs to be a string
-    const loc = locationData || { lat: 0, lng: 0, address: "Not provided" };
-    formData.append("location", JSON.stringify(loc));
+    // --- NEW: Add Contact Info ---
+    formData.append("contactInfo", JSON.stringify(contactData));
+    // -----------------------------
 
-    // 2. Add Files to Package
     if (files && files.length > 0) {
-      for (let i = 0; i < files.length; i++) {
+      for (let i = 0; i < files.length; i++)
         formData.append("evidence", files[i]);
-      }
     }
 
     try {
@@ -89,19 +95,28 @@ function VictimApp() {
 
           {/* STEP 3: Success */}
           {step === 3 && (
-            <div className="text-center space-y-4 animate-fade-in">
+            <div className="text-center space-y-4 animate-fade-in pb-8">
               <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto text-green-600">
                 <CheckCircle size={40} />
               </div>
-              <h2 className="text-2xl font-bold text-gray-800">Report Sent</h2>
-              <p className="text-gray-600 text-sm">
-                Your report has been securely received.
-              </p>
+
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800">
+                  Report Secured
+                </h2>
+                <p className="text-gray-500 text-sm">
+                  Responders have been notified.
+                </p>
+              </div>
+
+              {/* --- NEW ADVISOR --- */}
+              <SafetyAdvisor category={selectedCategory} />
+              {/* ------------------- */}
 
               <div className="pt-4 space-y-3">
                 <button
                   onClick={quickExit}
-                  className="w-full bg-slate-800 text-white py-3 rounded-xl font-bold hover:bg-slate-900"
+                  className="w-full bg-slate-800 text-white py-3 rounded-xl font-bold hover:bg-slate-900 transition-colors"
                 >
                   Close & Leave Site
                 </button>
@@ -110,9 +125,9 @@ function VictimApp() {
                     setStep(1);
                     setSelectedCategory(null);
                   }}
-                  className="w-full bg-white border border-gray-200 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-50 flex items-center justify-center gap-2"
+                  className="w-full bg-white border border-gray-200 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-50"
                 >
-                  <RotateCcw size={16} /> New Report
+                  New Report
                 </button>
               </div>
             </div>

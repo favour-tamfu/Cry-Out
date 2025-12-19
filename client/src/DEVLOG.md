@@ -26,3 +26,23 @@
     - Backend filters out Police access unless user consents.
   - **Media Prep:** Configured Cloudinary on the backend for evidence storage.
 - **Next:** Frontend File Uploads & Deployment.
+
+
+## Week 3: Active Rescue & Intelligent UX
+- **Goal:** Transform the app from a passive reporting tool into an active coordinated response system.
+- **Tech:** React Custom Components, REST APIs (Countries), MongoDB Updates.
+- **Progress:**
+  - **Coordinated Response System:**
+    - Implemented "Claim Case" logic.
+    - Responders can see if a case is already being handled by another agency (preventing overlap).
+    - Added "In Progress" status tracking.
+  - **AI Safety Advisor:**
+    - Built a rule-based engine that provides immediate, context-specific safety advice (e.g., "Avoid kitchen" for Domestic Violence) directly within the form.
+  - **Enhanced Contact Protocol:**
+    - Added "Immediate Callback" vs "Scheduled Safe Time" logic.
+    - Integrated Searchable Country Code dropdown using public API.
+    - Added "Voicemail Safety" check to protect victims from discovery.
+  - **UX/Safety Overhaul:**
+    - Made GPS location mandatory and automatic on load.
+    - Embedded "Best Practices" guide for writing reports.
+- **Next:** Final Deployment (Vercel/Render) and Organization Registration.
