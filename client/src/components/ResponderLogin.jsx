@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Shield, Lock, AlertCircle } from "lucide-react";
+import { Shield, Lock, AlertCircle, ArrowRight } from "lucide-react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
@@ -15,17 +15,15 @@ export default function ResponderLogin({ setOrg }) {
     setError("");
 
     try {
-      // Send the code to the backend to verify
       const res = await axios.post("http://localhost:3001/api/login", {
         accessCode,
       });
-
-      // If success, save the Org Data and redirect
       setOrg(res.data);
       navigate("/dashboard");
     } catch (err) {
       console.error(err);
-      setError("Invalid Access Code. Access Denied.");
+      // Display specific backend error (e.g., "Account pending approval")
+      setError(err.response?.data?.message || "Invalid Access Code.");
     } finally {
       setLoading(false);
     }
@@ -55,8 +53,8 @@ export default function ResponderLogin({ setOrg }) {
           </div>
 
           {error && (
-            <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-lg">
-              <AlertCircle size={16} /> {error}
+            <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-lg text-left">
+              <AlertCircle size={16} className="shrink-0" /> {error}
             </div>
           )}
 
@@ -69,9 +67,20 @@ export default function ResponderLogin({ setOrg }) {
           </button>
         </form>
 
+        {/* --- REGISTER LINK --- */}
+        <div className="mt-6 pt-4 border-t border-gray-100">
+          <button
+            onClick={() => navigate("/register-org")}
+            className="text-blue-600 hover:text-blue-800 text-sm font-semibold flex items-center justify-center gap-1 mx-auto"
+          >
+            Register New Organization <ArrowRight size={14} />
+          </button>
+        </div>
+        {/* --------------------- */}
+
         <button
           onClick={() => navigate("/")}
-          className="mt-6 text-sm text-gray-400 hover:text-gray-600"
+          className="mt-4 text-xs text-gray-400 hover:text-gray-600"
         >
           ← Back to Public Site
         </button>
@@ -85,9 +94,6 @@ export default function ResponderLogin({ setOrg }) {
           </p>
           <p>
             🏠 Shelter: <code>safe123</code>
-          </p>
-          <p>
-            ⛪ Church: <code>help123</code>
           </p>
         </div>
       </div>

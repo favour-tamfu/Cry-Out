@@ -12,6 +12,8 @@ const seedOrgs = [
     name: "Central Police Station",
     type: "POLICE",
     accessCode: "police123",
+    location: "Douala",
+    status: "APPROVED", // <--- Quotes added here
     allowedCategories: [
       "Domestic Violence",
       "Sexual Assault",
@@ -23,20 +25,24 @@ const seedOrgs = [
     name: "Safe Haven Women's Shelter",
     type: "SHELTER",
     accessCode: "safe123",
+    location: "Buea",
+    status: "APPROVED", // <--- Quotes added here
     allowedCategories: ["Domestic Violence", "Stalking", "Other"],
   },
   {
     name: "St. Mary's Community Center",
     type: "COMMUNITY",
     accessCode: "help123",
-    allowedCategories: ["Other", "Physical Abuse", "Domestic Violence"],
+    location: "Limbe",
+    status: "APPROVED", // <--- Quotes added here
+    allowedCategories: ["Other", "Physical Abuse"],
   },
 ];
 
 const seedDB = async () => {
-  await Organization.deleteMany({}); // Clear old data
-  await Organization.insertMany(seedOrgs); // Add new data
-  console.log("🌱 Database Seeded with Organizations!");
+  await Organization.deleteMany({});
+  await Organization.insertMany(seedOrgs);
+  console.log("🌱 Database Seeded & Approved!");
   mongoose.connection.close();
 };
 

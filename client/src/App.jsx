@@ -5,10 +5,11 @@ import { ShieldAlert, XCircle, CheckCircle, RotateCcw } from "lucide-react";
 import CategorySelect from "./components/CategorySelect";
 import ReportForm from "./components/ReportForm";
 import ResponderLogin from "./components/ResponderLogin";
+import ResponderRegister from "./components/ResponderRegister"; // New Import
 import AdminDashboard from "./components/AdminDashboard";
 import SafetyAdvisor from "./components/SafetyAdvisor";
+import SuperAdmin from "./components/SuperAdmin";
 
-// --- THE VICTIM APP COMPONENT ---
 function VictimApp() {
   const [step, setStep] = useState(1);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -16,10 +17,13 @@ function VictimApp() {
 
   const quickExit = () => (window.location.href = "https://www.google.com");
 
-  // Handle Form Submission
- // Updated Handle Submit
-  const handleSubmit = async (e, locationData, policeConsent, files,
-    contactData ) => {
+  const handleSubmit = async (
+    e,
+    locationData,
+    policeConsent,
+    files,
+    contactData
+  ) => {
     e.preventDefault();
     setIsSubmitting(true);
 
@@ -33,10 +37,7 @@ function VictimApp() {
         locationData || { lat: 0, lng: 0, address: "Not provided" }
       )
     );
-
-    // --- NEW: Add Contact Info ---
-    formData.append("contactInfo", JSON.stringify(contactData));
-    // -----------------------------
+    formData.append("contactInfo", JSON.stringify(contactData || {}));
 
     if (files && files.length > 0) {
       for (let i = 0; i < files.length; i++)
@@ -57,7 +58,6 @@ function VictimApp() {
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
       <div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden min-h-[500px] flex flex-col relative">
-        {/* Header */}
         <div className="bg-slate-900 p-4 flex justify-between items-center text-white">
           <div className="flex items-center gap-2">
             <ShieldAlert className="text-red-500" />
@@ -70,10 +70,7 @@ function VictimApp() {
             <XCircle size={14} /> QUICK EXIT
           </button>
         </div>
-
-        {/* Content Area */}
         <div className="p-6 flex-1 flex flex-col justify-center">
-          {/* STEP 1: Categories */}
           {step === 1 && (
             <CategorySelect
               onSelect={(cat) => {
@@ -82,8 +79,6 @@ function VictimApp() {
               }}
             />
           )}
-
-          {/* STEP 2: Form */}
           {step === 2 && (
             <ReportForm
               selectedCategory={selectedCategory}
@@ -92,14 +87,11 @@ function VictimApp() {
               isSubmitting={isSubmitting}
             />
           )}
-
-          {/* STEP 3: Success */}
           {step === 3 && (
             <div className="text-center space-y-4 animate-fade-in pb-8">
               <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto text-green-600">
                 <CheckCircle size={40} />
               </div>
-
               <div>
                 <h2 className="text-2xl font-bold text-gray-800">
                   Report Secured
@@ -108,15 +100,11 @@ function VictimApp() {
                   Responders have been notified.
                 </p>
               </div>
-
-              {/* --- NEW ADVISOR --- */}
               <SafetyAdvisor category={selectedCategory} />
-              {/* ------------------- */}
-
               <div className="pt-4 space-y-3">
                 <button
                   onClick={quickExit}
-                  className="w-full bg-slate-800 text-white py-3 rounded-xl font-bold hover:bg-slate-900 transition-colors"
+                  className="w-full bg-slate-800 text-white py-3 rounded-xl font-bold hover:bg-slate-900"
                 >
                   Close & Leave Site
                 </button>
@@ -125,9 +113,9 @@ function VictimApp() {
                     setStep(1);
                     setSelectedCategory(null);
                   }}
-                  className="w-full bg-white border border-gray-200 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-50"
+                  className="w-full bg-white border border-gray-200 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-50 flex items-center justify-center gap-2"
                 >
-                  New Report
+                  <RotateCcw size={16} /> New Report
                 </button>
               </div>
             </div>
@@ -138,20 +126,16 @@ function VictimApp() {
   );
 }
 
-// --- THE MAIN ROUTER ---
 function App() {
-  const [org, setOrg] = useState(null); // Stores the logged-in organization
+  const [org, setOrg] = useState(null);
 
   return (
     <Routes>
-      {/* Route 1: The Victim Interface (Home) */}
       <Route path="/" element={<VictimApp />} />
-
-      {/* Route 2: The Responder Login */}
       <Route path="/admin-login" element={<ResponderLogin setOrg={setOrg} />} />
-
-      {/* Route 3: The Dashboard (Protected) */}
+      <Route path="/register-org" element={<ResponderRegister />} />
       <Route path="/dashboard" element={<AdminDashboard org={org} />} />
+      <Route path="/super-admin" element={<SuperAdmin />} />
     </Routes>
   );
 }

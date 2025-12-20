@@ -6,6 +6,7 @@ export default function SearchableDropdown({
   value,
   onChange,
   placeholder,
+  returnField = "dial_code",
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -15,10 +16,9 @@ export default function SearchableDropdown({
   const filtered = options.filter(
     (opt) =>
       opt.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      opt.dial_code.includes(searchTerm)
+      (opt.dial_code && opt.dial_code.includes(searchTerm))
   );
 
-  // Close dropdown if clicked outside
   useEffect(() => {
     function handleClickOutside(event) {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
@@ -30,21 +30,21 @@ export default function SearchableDropdown({
   }, [wrapperRef]);
 
   return (
-    <div className="relative w-32" ref={wrapperRef}>
-      {/* The Trigger Button / Display */}
+    <div className="relative w-full" ref={wrapperRef}>
+      {/* The Trigger Button */}
       <div
-        className="p-2 border rounded-l-lg text-sm bg-gray-50 flex items-center justify-between cursor-pointer hover:bg-gray-100 h-full border-r-0"
+        className="p-2 border rounded-lg text-sm bg-gray-50 flex items-center justify-between cursor-pointer hover:bg-gray-100 h-full w-full"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <span className="font-mono font-bold truncate">
+        <span className="font-medium truncate text-gray-700">
           {value || placeholder}
         </span>
-        <ChevronDown size={14} className="opacity-50 ml-1" />
+        <ChevronDown size={14} className="opacity-50 ml-1 shrink-0" />
       </div>
 
       {/* The Dropdown List */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-xl z-50 max-h-60 flex flex-col">
+        <div className="absolute top-full left-0 mt-1 w-full min-w-[200px] bg-white border border-gray-200 rounded-lg shadow-xl z-50 max-h-60 flex flex-col">
           {/* Search Input */}
           <div className="p-2 border-b sticky top-0 bg-white rounded-t-lg">
             <div className="flex items-center gap-2 bg-gray-100 p-1 px-2 rounded-md">
@@ -53,7 +53,7 @@ export default function SearchableDropdown({
                 autoFocus
                 type="text"
                 className="bg-transparent outline-none text-xs w-full"
-                placeholder="Search name or code..."
+                placeholder="Search..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -68,13 +68,14 @@ export default function SearchableDropdown({
                   key={i}
                   className="p-2 hover:bg-blue-50 cursor-pointer rounded text-xs flex justify-between items-center"
                   onClick={() => {
-                    onChange(opt.dial_code);
+                    // DYNAMIC RETURN: Return Name OR Code based on prop
+                    onChange(opt[returnField]);
                     setIsOpen(false);
                     setSearchTerm("");
                   }}
                 >
-                  <span>{opt.name}</span>
-                  <span className="font-mono text-gray-500 font-bold">
+                  <span className="truncate pr-2">{opt.name}</span>
+                  <span className="font-mono text-gray-500 font-bold shrink-0">
                     {opt.dial_code}
                   </span>
                 </div>

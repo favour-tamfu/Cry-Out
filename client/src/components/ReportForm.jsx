@@ -83,32 +83,49 @@ export default function ReportForm({
       setFiles((prev) => [...prev, ...Array.from(e.target.files)]);
   };
   const handleAudioAdd = (file) => {
+    console.log("🎤 Audio File Created:", file);
     if (file) setFiles((prev) => [...prev, file]);
   };
   const removeFile = (idx) =>
     setFiles((prev) => prev.filter((_, i) => i !== idx));
 
-  const handleSubmitWithLoc = (e) => {
-    e.preventDefault();
-    if (!location) {
-      alert("Location is required.");
-      return;
-    }
+ const handleSubmitWithLoc = (e) => {
+   e.preventDefault();
+   if (!location) {
+     alert("Location is required.");
+     return;
+   }
 
-    let finalContactValue = contactValue;
-    if (contactMethod === "PHONE") {
-      finalContactValue = `${countryCode} ${contactValue}`;
-    }
+   let finalContactValue = contactValue;
+   if (contactMethod === "PHONE") {
+     finalContactValue = `${countryCode} ${contactValue}`;
+   }
 
-    const contactData = {
-      method: contactMethod,
-      value: finalContactValue,
-      safeTime: requestImmediate ? "ASAP" : safeTime,
-      safeToVoicemail: safeVoicemail,
-      immediateHelp: requestImmediate,
-    };
-    onSubmit(e, location, consent, files, contactData);
-  };
+   // --- FIX FOR TIME LOGIC ---
+   // 1. If Immediate is checked, we don't care about the calendar. Send "ASAP".
+   // 2. If Immediate is NOT checked, we check if safeTime has a value.
+   // 3. If no safeTime, send null.
+   let finalTime = null;
+
+   if (requestImmediate) {
+     finalTime = new Date().toISOString(); // Send current time stamp for sorting
+   } else if (safeTime) {
+     finalTime = safeTime; // Send the value from the calendar input
+   }
+
+   const contactData = {
+     method: contactMethod,
+     value: finalContactValue,
+     safeTime: finalTime,
+     safeToVoicemail: safeVoicemail,
+     immediateHelp: requestImmediate,
+   };
+
+   // DEBUG: Open console (F12) to see this when you submit!
+   console.log("🚀 SENDING CONTACT DATA:", contactData);
+
+   onSubmit(e, location, consent, files, contactData);
+ };
 
   return (
     <div className="space-y-4 animate-slide-up pb-10">

@@ -28,7 +28,8 @@ const ReportSchema = new mongoose.Schema({
     method: { type: String, enum: ["PHONE", "EMAIL", "NONE"], default: "NONE" },
     value: String, // The actual number or email
     safeToVoicemail: { type: Boolean, default: false },
-    safeTimes: String, // e.g. "9am-5pm only"
+    safeTime: { type: String, default: null },
+    immediateHelp: { type: Boolean, default: false },
   },
   // ------------------------------
 

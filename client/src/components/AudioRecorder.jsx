@@ -19,21 +19,25 @@ export default function AudioRecorder({ onRecordingComplete }) {
         }
       };
 
-      mediaRecorderRef.current.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, {
-          type: "audio/webm",
-        });
-        const url = URL.createObjectURL(audioBlob);
-        setAudioURL(url);
+     mediaRecorderRef.current.onstop = () => {
+       // Only process if we have data
+       if (audioChunksRef.current.length === 0) return;
 
-        // Convert Blob to File to send to backend
-        const audioFile = new File(
-          [audioBlob],
-          `voice_note_${Date.now()}.webm`,
-          { type: "audio/webm" }
-        );
-        onRecordingComplete(audioFile);
-      };
+       const audioBlob = new Blob(audioChunksRef.current, {
+         type: "audio/webm",
+       });
+
+       // Ensure the file has a name and type
+       const audioFile = new File(
+         [audioBlob],
+         `voice_note_${Date.now()}.webm`,
+         { type: "audio/webm" }
+       );
+
+       onRecordingComplete(audioFile);
+       const url = URL.createObjectURL(audioBlob);
+       setAudioURL(url);
+     };
 
       mediaRecorderRef.current.start();
       setIsRecording(true);
