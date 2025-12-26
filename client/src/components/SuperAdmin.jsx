@@ -14,6 +14,7 @@ import {
   Save,
   Download,
 } from "lucide-react";
+import { API_URL } from '../config'; // (Check path based on file location)
 
 export default function SuperAdmin() {
   const [orgs, setOrgs] = useState([]);
@@ -42,7 +43,9 @@ export default function SuperAdmin() {
 
   const fetchOrgs = async () => {
     try {
-      const res = await axios.get("http://localhost:3001/api/admin/orgs");
+      const res = await axios.get(`${API_URL}/api/admin/orgs`
+
+      );
       setOrgs(res.data);
     } catch (err) {
       console.error(err);
@@ -51,7 +54,7 @@ export default function SuperAdmin() {
 
   const updateStatus = async (id, newStatus) => {
     if (!confirm(`Mark this organization as ${newStatus}?`)) return;
-    await axios.put(`http://localhost:3001/api/admin/update-status/${id}`, {
+    await axios.put(`${API_URL}/api/admin/update-status/${id}`, {
       status: newStatus,
     });
     fetchOrgs();
@@ -59,7 +62,7 @@ export default function SuperAdmin() {
 
   const deleteOrg = async (id) => {
     if (!confirm("PERMANENTLY DELETE this organization?")) return;
-    await axios.delete(`http://localhost:3001/api/admin/delete-org/${id}`);
+    await axios.delete(`${API_URL}/api/admin/delete-org/${id}`);
     fetchOrgs();
   };
 
@@ -69,7 +72,7 @@ export default function SuperAdmin() {
   };
 
   const saveCategories = async (id) => {
-    await axios.put(`http://localhost:3001/api/admin/update-categories/${id}`, {
+    await axios.put(`${API_URL}/api/admin/update-categories/${id}`, {
       categories: editCats,
     });
     setEditingId(null);

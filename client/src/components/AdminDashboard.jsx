@@ -11,6 +11,7 @@ import {
   Lock,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { API_URL } from '../config'; // (Check path based on file location)
 
 export default function AdminDashboard({ org }) {
   const [reports, setReports] = useState([]);
@@ -26,7 +27,7 @@ export default function AdminDashboard({ org }) {
     const fetchSecureReports = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:3001/api/org-reports/${org._id}`
+          `${API_URL}/api/org-reports/${org._id}`
         );
         setReports(res.data);
       } catch (error) {
@@ -49,7 +50,7 @@ export default function AdminDashboard({ org }) {
 
    try {
      // 1. Make the API Call
-     await axios.put(`http://localhost:3001/api/reports/${reportId}/claim`, {
+     await axios.put(`${API_URL}/api/reports/${reportId}/claim`, {
        orgId: org._id,
        orgName: org.name,
      });

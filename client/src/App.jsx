@@ -9,6 +9,7 @@ import ResponderRegister from "./components/ResponderRegister"; // New Import
 import AdminDashboard from "./components/AdminDashboard";
 import SafetyAdvisor from "./components/SafetyAdvisor";
 import SuperAdmin from "./components/SuperAdmin";
+import { API_URL } from '../config'; // (Check path based on file location)
 
 function VictimApp() {
   const [step, setStep] = useState(1);
@@ -45,7 +46,7 @@ function VictimApp() {
     }
 
     try {
-      await axios.post("http://localhost:3001/api/reports", formData);
+      await axios.post(`${API_URL}/api/reports`, formData);
       setStep(3);
     } catch (error) {
       console.error(error);

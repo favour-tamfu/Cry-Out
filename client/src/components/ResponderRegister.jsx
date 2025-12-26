@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import SearchableDropdown from "./SearchableDropdown";
+import { API_URL } from '../config'; // (Check path based on file location)
 
 export default function ResponderRegister() {
   const [formData, setFormData] = useState({
@@ -104,7 +105,7 @@ export default function ResponderRegister() {
     }
 
     try {
-      await axios.post("http://localhost:3001/api/register-org", data);
+      await axios.post(`${API_URL}/api/register-org`, data);
       setStatus("SUCCESS");
     } catch (err) {
       setErrorMsg(err.response?.data?.message || "Registration failed");

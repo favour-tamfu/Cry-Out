@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Shield, Lock, AlertCircle, ArrowRight } from "lucide-react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { API_URL } from '../config'; // (Check path based on file location)
 
 export default function ResponderLogin({ setOrg }) {
   const [accessCode, setAccessCode] = useState("");
@@ -15,7 +16,7 @@ export default function ResponderLogin({ setOrg }) {
     setError("");
 
     try {
-      const res = await axios.post("http://localhost:3001/api/login", {
+      const res = await axios.post(`${API_URL}/api/login`, {
         accessCode,
       });
       setOrg(res.data);
