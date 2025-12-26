@@ -1,5 +1,5 @@
-// Change this to your Render URL (no trailing slash)
-export const API_URL = "https://cry-out-backend.onrender.com";
-
-// If you want to go back to local testing later, verify:
-// export const API_URL = "http://localhost:3001";
+// Vite detects if you are running 'npm run dev' (development) or built for Vercel (production)
+export const API_URL =
+  import.meta.env.MODE === "development"
+    ? "http://localhost:3001"
+    : "https://cry-out-backend.onrender.com" // <--- Replace with your actual Render URL
