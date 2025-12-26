@@ -9,7 +9,7 @@ import ResponderRegister from "./components/ResponderRegister"; // New Import
 import AdminDashboard from "./components/AdminDashboard";
 import SafetyAdvisor from "./components/SafetyAdvisor";
 import SuperAdmin from "./components/SuperAdmin";
-import { API_URL } from './config'; // (Check path based on file location)
+import { API_URL } from "./config"; // (Check path based on file location)
 
 function VictimApp() {
   const [step, setStep] = useState(1);
@@ -50,7 +50,11 @@ function VictimApp() {
       setStep(3);
     } catch (error) {
       console.error(error);
-      alert("Failed to send report.");
+      const msg =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to send report.";
+      alert(`Error: ${msg}`);
     } finally {
       setIsSubmitting(false);
     }

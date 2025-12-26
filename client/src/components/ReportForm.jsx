@@ -403,11 +403,19 @@ export default function ReportForm({
         <button
           type="submit"
           disabled={isSubmitting || !location}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg mt-4 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          className={`w-full text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg mt-4 transition-all
+                ${
+                  isSubmitting || !location
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700"
+                }`}
         >
-          <Send size={20} />{" "}
+          <Send size={20} />
           {isSubmitting
-            ? "Sending..."
+            ? // Smart Loading Text
+              files.some((f) => f.type.startsWith("video"))
+              ? "Uploading Video... (Please Wait)"
+              : "Sending Report..."
             : location
             ? "Submit Report"
             : "Waiting for GPS..."}
