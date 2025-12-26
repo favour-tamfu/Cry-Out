@@ -9,7 +9,7 @@ import ResponderRegister from "./components/ResponderRegister"; // New Import
 import AdminDashboard from "./components/AdminDashboard";
 import SafetyAdvisor from "./components/SafetyAdvisor";
 import SuperAdmin from "./components/SuperAdmin";
-import { API_URL } from '../config'; // (Check path based on file location)
+import { API_URL } from './config'; // (Check path based on file location)
 
 function VictimApp() {
   const [step, setStep] = useState(1);
