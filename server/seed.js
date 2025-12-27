@@ -13,7 +13,7 @@ const seedOrgs = [
     type: "POLICE",
     accessCode: "police123",
     location: "Douala",
-    status: "APPROVED", // <--- Quotes added here
+    status: "APPROVED",
     allowedCategories: [
       "Domestic Violence",
       "Sexual Assault",
@@ -26,7 +26,7 @@ const seedOrgs = [
     type: "SHELTER",
     accessCode: "safe123",
     location: "Buea",
-    status: "APPROVED", // <--- Quotes added here
+    status: "APPROVED",
     allowedCategories: ["Domestic Violence", "Stalking", "Other"],
   },
   {
@@ -34,16 +34,26 @@ const seedOrgs = [
     type: "COMMUNITY",
     accessCode: "help123",
     location: "Limbe",
-    status: "APPROVED", // <--- Quotes added here
+    status: "APPROVED",
     allowedCategories: ["Other", "Physical Abuse"],
   },
 ];
 
 const seedDB = async () => {
-  await Organization.deleteMany({});
-  await Organization.insertMany(seedOrgs);
-  console.log("🌱 Database Seeded & Approved!");
+  console.log("🌱 Seeding Database (Safe Mode)...");
+
+ 
+  for (const org of seedOrgs) {
+    await Organization.findOneAndUpdate(
+      { accessCode: org.accessCode }, // Find by access code
+      org, // Update with new data 
+      { upsert: true, new: true } // Create if doesn't exist
+    );
+  }
+
+  console.log("✅ Core Accounts Updated/Restored!");
   mongoose.connection.close();
 };
+
 
 seedDB();

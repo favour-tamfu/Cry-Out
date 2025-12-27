@@ -68,7 +68,6 @@ export default function SearchableDropdown({
                   key={i}
                   className="p-2 hover:bg-blue-50 cursor-pointer rounded text-xs flex justify-between items-center"
                   onClick={() => {
-                    // DYNAMIC RETURN: Return Name OR Code based on prop
                     onChange(opt[returnField]);
                     setIsOpen(false);
                     setSearchTerm("");

@@ -12,7 +12,12 @@ const ReportSchema = new mongoose.Schema({
       "Other",
     ],
   },
-  description: { type: String, required: true },
+
+  description: {
+    type: String,
+    default: "No text description provided.",
+  },
+
   media: [String],
 
   location: {
@@ -23,17 +28,6 @@ const ReportSchema = new mongoose.Schema({
 
   contactPolice: { type: Boolean, default: false },
 
-  // --- NEW: SAFE CONTACT INFO ---
-  contactInfo: {
-    method: { type: String, enum: ["PHONE", "EMAIL", "NONE"], default: "NONE" },
-    value: String, // The actual number or email
-    safeToVoicemail: { type: Boolean, default: false },
-    safeTime: { type: String, default: null },
-    immediateHelp: { type: Boolean, default: false },
-  },
-  // ------------------------------
-
-  // --- NEW FIELDS FOR CASE MANAGEMENT ---
   status: {
     type: String,
     default: "Pending",
@@ -44,7 +38,25 @@ const ReportSchema = new mongoose.Schema({
     orgName: String,
     claimedAt: Date,
   },
-  // --------------------------------------
+
+  isPriority: { type: Boolean, default: false },
+
+  isEscalated: { type: Boolean, default: false },
+
+  resolution: {
+    resolvedBy: String,
+    resolvedAt: Date,
+    notes: String,
+    proof: [String],
+  },
+
+  contactInfo: {
+    method: { type: String, enum: ["PHONE", "EMAIL", "NONE"], default: "NONE" },
+    value: String,
+    safeToVoicemail: Boolean,
+    safeTime: String,
+    immediateHelp: Boolean,
+  },
 
   createdAt: { type: Date, default: Date.now },
 });

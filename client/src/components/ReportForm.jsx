@@ -96,21 +96,28 @@ export default function ReportForm({
      return;
    }
 
+   // Check if there is Description OR Files 
+   const hasText = e.target.description.value.trim().length > 0;
+   const hasEvidence = files.length > 0;
+
+   if (!hasText && !hasEvidence) {
+     alert(
+       "Please provide either a text description, an audio recording, or a photo."
+     );
+     return;
+   }
+
    let finalContactValue = contactValue;
    if (contactMethod === "PHONE") {
      finalContactValue = `${countryCode} ${contactValue}`;
    }
 
-   // --- FIX FOR TIME LOGIC ---
-   // 1. If Immediate is checked, we don't care about the calendar. Send "ASAP".
-   // 2. If Immediate is NOT checked, we check if safeTime has a value.
-   // 3. If no safeTime, send null.
    let finalTime = null;
 
    if (requestImmediate) {
      finalTime = new Date().toISOString(); // Send current time stamp for sorting
    } else if (safeTime) {
-     finalTime = safeTime; // Send the value from the calendar input
+     finalTime = safeTime;
    }
 
    const contactData = {
@@ -121,7 +128,6 @@ export default function ReportForm({
      immediateHelp: requestImmediate,
    };
 
-   // DEBUG: Open console (F12) to see this when you submit!
    console.log("🚀 SENDING CONTACT DATA:", contactData);
 
    onSubmit(e, location, consent, files, contactData);
@@ -163,7 +169,6 @@ export default function ReportForm({
           </div>
           <textarea
             name="description"
-            required
             rows="4"
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none text-sm"
             placeholder="Describe the incident here..."

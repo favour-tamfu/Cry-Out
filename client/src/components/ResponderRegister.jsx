@@ -30,7 +30,6 @@ export default function ResponderRegister() {
     description: "",
   });
 
-  // New States
   const [phoneCode, setPhoneCode] = useState("+237");
   const [countryList, setCountryList] = useState([]);
   const [loadingCodes, setLoadingCodes] = useState(true);
@@ -70,7 +69,6 @@ export default function ResponderRegister() {
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  // File Handler
   const handleDocChange = (e) => {
     if (e.target.files) {
       setDocs([...docs, ...Array.from(e.target.files)]);
@@ -83,9 +81,7 @@ export default function ResponderRegister() {
     e.preventDefault();
     setStatus("LOADING");
 
-    // Convert to FormData for File Upload
     const data = new FormData();
-    // Append text fields
     Object.keys(formData).forEach((key) => {
       if (key === "contactPhone") {
         data.append(key, `${phoneCode} ${formData[key]}`);
@@ -94,7 +90,6 @@ export default function ResponderRegister() {
       }
     });
 
-    // Append Files
     docs.forEach((file) => {
       data.append("documents", file);
     });

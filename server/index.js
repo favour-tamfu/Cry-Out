@@ -25,19 +25,17 @@ cloudinary.v2.config({
 });
 
 // 2. CONFIGURE STORAGE
-// 2. CONFIGURE STORAGE (RELAXED)
 const storage = new CloudinaryStorage({
-  cloudinary: cloudinary, 
+  cloudinary: cloudinary,
   params: {
     folder: "cryout-evidence",
-    resource_type: "auto", // Automatically detect Image vs Video vs Audio
-    // Remove 'allowed_formats' array to prevent rejection errors
+    resource_type: "auto",
   },
 });
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 1000 * 1024 * 1024 },
+  limits: { fileSize: 1000 * 1024 * 1024 }, // 1GB limit for Video
 });
 
 mongoose
@@ -46,54 +44,78 @@ mongoose
   .catch((err) => console.error("❌ MongoDB Connection Error:", err));
 
 // ==========================================
-//  1. VICTIM REPORTING ROUTES (FIXED)
+//  1. VICTIM REPORTING ROUTES
 // ==========================================
 
-// --- VICTIM REPORTING ROUTE (SAFER UPLOAD) ---
-app.post("/api/reports", (req, res, next) => {
-    // 1. Run Upload Middleware manually to catch errors
-    upload.array("evidence")(req, res, (err) => {
-        if (err) {
-            console.error("❌ UPLOAD ERROR:", err);
-            return res.status(400).json({ message: "File upload failed", error: err.message });
-        }
-        next(); // If success, move to the next function (saving logic)
-    });
-}, async (req, res) => {
+// Public directory of HELP organizations
+app.get("/api/public/help-directory", async (req, res) => {
   try {
-    console.log("📨 Processing Report Logic...");
-
-    // Safe Parsing
-    let contactInfoData = {};
-    try {
-        contactInfoData = req.body.contactInfo ? JSON.parse(req.body.contactInfo) : {};
-    } catch (e) { console.log("Error parsing contact"); }
-
-    let locationData = {};
-    try {
-        locationData = req.body.location ? JSON.parse(req.body.location) : { lat: 0, lng: 0 };
-    } catch (e) { console.log("Error parsing location"); }
-
-    const reportData = {
-      category: req.body.category,
-      description: req.body.description,
-      contactPolice: req.body.contactPolice === "true",
-      location: locationData,
-      contactInfo: contactInfoData,
-      // Map files safely
-      media: req.files ? req.files.map((file) => file.path || file.secure_url || file.url) : [],
-    };
-
-    const newReport = new Report(reportData);
-    const savedReport = await newReport.save();
-
-    console.log(`📝 Report Saved! ID: ${savedReport._id}`);
-    res.status(201).json(savedReport);
+    const orgs = await Organization.find({ status: "APPROVED" }).select(
+      "name type country region city contactPhone contactEmail allowedCategories"
+    );
+    res.json(orgs);
   } catch (err) {
-    console.error("Save Error:", err);
-    res.status(500).json({ message: "Database error", error: err.message });
+    res.status(500).json(err);
   }
 });
+
+app.post(
+  "/api/reports",
+  (req, res, next) => {
+    upload.array("evidence")(req, res, (err) => {
+      if (err) {
+        console.error("❌ UPLOAD ERROR:", err);
+        return res
+          .status(400)
+          .json({ message: "File upload failed", error: err.message });
+      }
+      next();
+    });
+  },
+  async (req, res) => {
+    try {
+      console.log("📨 Processing Report Logic...");
+
+      let contactInfoData = {};
+      try {
+        contactInfoData = req.body.contactInfo
+          ? JSON.parse(req.body.contactInfo)
+          : {};
+      } catch (e) {
+        console.log("Error parsing contact");
+      }
+
+      let locationData = {};
+      try {
+        locationData = req.body.location
+          ? JSON.parse(req.body.location)
+          : { lat: 0, lng: 0 };
+      } catch (e) {
+        console.log("Error parsing location");
+      }
+
+      const reportData = {
+        category: req.body.category,
+        description: req.body.description,
+        contactPolice: req.body.contactPolice === "true",
+        location: locationData,
+        contactInfo: contactInfoData,
+        media: req.files
+          ? req.files.map((file) => file.path || file.secure_url || file.url)
+          : [],
+      };
+
+      const newReport = new Report(reportData);
+      const savedReport = await newReport.save();
+
+      console.log(`📝 Report Saved! ID: ${savedReport._id}`);
+      res.status(201).json(savedReport);
+    } catch (err) {
+      console.error("Save Error:", err);
+      res.status(500).json({ message: "Database error", error: err.message });
+    }
+  }
+);
 
 // ==========================================
 //  2. ORGANIZATION REGISTRATION
@@ -115,11 +137,9 @@ app.post("/api/register-org", upload.array("documents"), async (req, res) => {
     const existing = await Organization.findOne({
       accessCode: req.body.accessCode,
     });
-    if (existing) {
+    if (existing)
       return res.status(400).json({ message: "Access Code already taken." });
-    }
 
-    // Default Categories Logic
     const type = req.body.type;
     let categories = ["Other"];
     if (type === "POLICE")
@@ -188,8 +208,12 @@ app.get("/api/org-reports/:orgId", async (req, res) => {
     const org = await Organization.findById(req.params.orgId);
     if (!org) return res.status(404).json({ message: "Org not found" });
 
-    let filter = { category: { $in: org.allowedCategories } };
-    if (org.type === "POLICE") filter.contactPolice = true;
+    let filter = {};
+    if (org.type === "POLICE") {
+      filter.contactPolice = true;
+    } else {
+      filter.category = { $in: org.allowedCategories };
+    }
 
     const reports = await Report.find(filter).sort({ createdAt: -1 });
     res.status(200).json(reports);
@@ -218,6 +242,48 @@ app.put("/api/reports/:id/claim", async (req, res) => {
   }
 });
 
+// Escalate
+app.put("/api/reports/:id/escalate", async (req, res) => {
+  try {
+    await Report.findByIdAndUpdate(req.params.id, { isEscalated: true });
+    res.json({ message: "Case Escalated" });
+  } catch (err) {
+    res.status(500).json(err);
+  }
+});
+
+// Force Police
+app.put("/api/reports/:id/involve-police", async (req, res) => {
+  try {
+    await Report.findByIdAndUpdate(req.params.id, { contactPolice: true });
+    res.json({ message: "Police Access Granted" });
+  } catch (err) {
+    res.status(500).json(err);
+  }
+});
+
+// Resolve Case (With Proof)
+app.post(
+  "/api/reports/:id/resolve",
+  upload.array("proof"),
+  async (req, res) => {
+    try {
+      const report = await Report.findById(req.params.id);
+      report.status = "Resolved";
+      report.resolution = {
+        resolvedBy: req.body.orgName,
+        resolvedAt: new Date(),
+        notes: req.body.notes,
+        proof: req.files ? req.files.map((f) => f.path || f.secure_url) : [],
+      };
+      await report.save();
+      res.json({ message: "Case Resolved" });
+    } catch (err) {
+      res.status(500).json(err);
+    }
+  }
+);
+
 // ==========================================
 //  4. SUPER ADMIN ROUTES
 // ==========================================
@@ -242,6 +308,7 @@ app.get("/api/admin/pending-orgs", async (req, res) => {
   }
 });
 
+// Update Status
 app.put("/api/admin/update-status/:id", async (req, res) => {
   try {
     const { status } = req.body;
@@ -289,6 +356,65 @@ app.delete("/api/admin/reject-org/:id", async (req, res) => {
   } catch (err) {
     res.status(500).json(err);
   }
+});
+
+// Get ALL Reports
+app.get("/api/admin/all-reports", async (req, res) => {
+  try {
+    const reports = await Report.find().sort({ createdAt: -1 });
+    res.json(reports);
+  } catch (err) {
+    res.status(500).json(err);
+  }
+});
+
+// Mark Priority
+app.put("/api/admin/mark-priority/:id", async (req, res) => {
+  try {
+    const report = await Report.findById(req.params.id);
+    report.isPriority = !report.isPriority;
+    await report.save();
+    res.json({ message: `Priority set` });
+  } catch (err) {
+    res.status(500).json(err);
+  }
+});
+
+// Force Unclaim
+app.put("/api/admin/unclaim-report/:id", async (req, res) => {
+  try {
+    const report = await Report.findById(req.params.id);
+    report.status = "Pending";
+    report.assignedTo = { orgId: null, orgName: null, claimedAt: null };
+    await report.save();
+    res.json({ message: "Case reset to Unclaimed" });
+  } catch (err) {
+    res.status(500).json(err);
+  }
+});
+
+// Force Assign Case to an Org
+app.put('/api/admin/assign-report/:id', async (req, res) => {
+    try {
+        const { orgId, orgName, isPolice } = req.body;
+        
+        const updateData = {
+            status: 'In Progress',
+            assignedTo: {
+                orgId: orgId,
+                orgName: orgName,
+                claimedAt: new Date()
+            }
+        };
+
+        // If assigning to police, automatically grant permission
+        if (isPolice) {
+            updateData.contactPolice = true;
+        }
+
+        await Report.findByIdAndUpdate(req.params.id, updateData);
+        res.json({ message: "Case Assigned Successfully" });
+    } catch (err) { res.status(500).json(err); }
 });
 
 const PORT = process.env.PORT || 3001;

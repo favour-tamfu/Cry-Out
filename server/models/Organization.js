@@ -1,7 +1,6 @@
 const mongoose = require("mongoose");
 
 const OrganizationSchema = new mongoose.Schema({
-  // ... existing fields ...
   name: { type: String, required: true },
   type: {
     type: String,
@@ -20,14 +19,12 @@ const OrganizationSchema = new mongoose.Schema({
   documents: [String],
   accessCode: { type: String, required: true, unique: true },
 
-  // --- UPDATED FIELDS ---
   status: {
     type: String,
     default: "PENDING",
     enum: ["PENDING", "APPROVED", "REJECTED"],
   },
-  allowedCategories: [String], // You can now edit this
-  // ---------------------
+  allowedCategories: [String],
 
   createdAt: { type: Date, default: Date.now },
 });
