@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Shield, Lock, AlertCircle, ArrowRight } from "lucide-react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { API_URL } from '../config'; // (Check path based on file location)
+import { API_URL } from '../config'; 
 
 export default function ResponderLogin({ setOrg }) {
   const [accessCode, setAccessCode] = useState("");
@@ -87,15 +87,8 @@ export default function ResponderLogin({ setOrg }) {
         </button>
 
         <div className="mt-8 pt-4 border-t text-xs text-gray-400 text-left">
-          <p>
-            <strong>Demo Codes:</strong>
-          </p>
-          <p>
-            👮 Police: <code>police123</code>
-          </p>
-          <p>
-            🏠 Shelter: <code>safe123</code>
-          </p>
+         
+         
         </div>
       </div>
     </div>
