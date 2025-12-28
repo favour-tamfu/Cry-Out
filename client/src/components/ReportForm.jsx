@@ -11,9 +11,11 @@ import {
   Info,
   Siren,
   Calendar,
+  Image as ImageIcon,
+  UploadCloud,
 } from "lucide-react";
 import AudioRecorder from "./AudioRecorder";
-import SearchableDropdown from "./SearchableDropdown"; // Import the new component
+import SearchableDropdown from "./SearchableDropdown";
 
 export default function ReportForm({
   onSubmit,
@@ -29,7 +31,7 @@ export default function ReportForm({
   // Contact State
   const [contactMethod, setContactMethod] = useState("NONE");
   const [contactValue, setContactValue] = useState("");
-  const [countryCode, setCountryCode] = useState("+237"); // Default
+  const [countryCode, setCountryCode] = useState("+237");
   const [countryList, setCountryList] = useState([]);
 
   const [safeTime, setSafeTime] = useState("");
@@ -54,7 +56,6 @@ export default function ReportForm({
 
         setCountryList(formatted);
       } catch (err) {
-        console.error("Failed to load codes", err);
         setCountryList([
           { name: "Cameroon", dial_code: "+237" },
           { name: "USA", dial_code: "+1" },
@@ -79,59 +80,46 @@ export default function ReportForm({
   }, []);
 
   const handleFileAdd = (e) => {
-    if (e.target.files)
+    if (e.target.files) {
+      // Limit file size check could go here
       setFiles((prev) => [...prev, ...Array.from(e.target.files)]);
+    }
   };
   const handleAudioAdd = (file) => {
-    console.log("🎤 Audio File Created:", file);
     if (file) setFiles((prev) => [...prev, file]);
   };
   const removeFile = (idx) =>
     setFiles((prev) => prev.filter((_, i) => i !== idx));
 
- const handleSubmitWithLoc = (e) => {
-   e.preventDefault();
-   if (!location) {
-     alert("Location is required.");
-     return;
-   }
+  const handleSubmitWithLoc = (e) => {
+    e.preventDefault();
+    if (!location) {
+      alert("Location is required.");
+      return;
+    }
 
-   // Check if there is Description OR Files 
-   const hasText = e.target.description.value.trim().length > 0;
-   const hasEvidence = files.length > 0;
+    let finalContactValue = contactValue;
+    if (contactMethod === "PHONE") {
+      finalContactValue = `${countryCode} ${contactValue}`;
+    }
 
-   if (!hasText && !hasEvidence) {
-     alert(
-       "Please provide either a text description, an audio recording, or a photo."
-     );
-     return;
-   }
+    // Determine Time Logic
+    let finalTime = null;
+    if (requestImmediate) {
+      finalTime = new Date().toISOString();
+    } else if (safeTime) {
+      finalTime = safeTime;
+    }
 
-   let finalContactValue = contactValue;
-   if (contactMethod === "PHONE") {
-     finalContactValue = `${countryCode} ${contactValue}`;
-   }
-
-   let finalTime = null;
-
-   if (requestImmediate) {
-     finalTime = new Date().toISOString(); // Send current time stamp for sorting
-   } else if (safeTime) {
-     finalTime = safeTime;
-   }
-
-   const contactData = {
-     method: contactMethod,
-     value: finalContactValue,
-     safeTime: finalTime,
-     safeToVoicemail: safeVoicemail,
-     immediateHelp: requestImmediate,
-   };
-
-   console.log("🚀 SENDING CONTACT DATA:", contactData);
-
-   onSubmit(e, location, consent, files, contactData);
- };
+    const contactData = {
+      method: contactMethod,
+      value: finalContactValue,
+      safeTime: finalTime,
+      safeToVoicemail: safeVoicemail,
+      immediateHelp: requestImmediate,
+    };
+    onSubmit(e, location, consent, files, contactData);
+  };
 
   return (
     <div className="space-y-4 animate-slide-up pb-10">
@@ -159,6 +147,7 @@ export default function ReportForm({
       </div>
 
       <form onSubmit={handleSubmitWithLoc} className="space-y-4">
+        {/* Description */}
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wide">
             <Info size={14} /> Report Guide
@@ -171,13 +160,20 @@ export default function ReportForm({
             name="description"
             rows="4"
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none text-sm"
-            placeholder="Describe the incident here..."
+            placeholder="Describe the incident here...
+Or Record an audio ..."
           ></textarea>
         </div>
 
-        <div className="space-y-3">
+        {/* --- IMPROVED MEDIA TOOLS --- */}
+        <div className="space-y-3 border-t border-gray-100 pt-4">
+          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+            Evidence Collection
+          </h3>
+
           <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col items-center p-3 border rounded-xl hover:bg-gray-50 cursor-pointer text-gray-600 text-xs font-bold">
+            {/* 1. LIVE PHOTO (Forces Camera) */}
+            <label className="flex flex-col items-center justify-center p-4 border rounded-xl bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-all active:scale-95 text-center">
               <input
                 type="file"
                 accept="image/*"
@@ -185,9 +181,14 @@ export default function ReportForm({
                 className="hidden"
                 onChange={handleFileAdd}
               />
-              <Camera size={20} className="mb-1 text-blue-500" /> Take Photo
+              <Camera size={24} className="mb-2 text-blue-600" />
+              <span className="text-xs font-bold text-blue-800">
+                Take Photo
+              </span>
             </label>
-            <label className="flex flex-col items-center p-3 border rounded-xl hover:bg-gray-50 cursor-pointer text-gray-600 text-xs font-bold">
+
+            {/* 2. LIVE VIDEO (Forces Camera) */}
+            <label className="flex flex-col items-center justify-center p-4 border rounded-xl bg-red-50/50 hover:bg-red-100 cursor-pointer transition-all active:scale-95 text-center">
               <input
                 type="file"
                 accept="video/*"
@@ -195,19 +196,52 @@ export default function ReportForm({
                 className="hidden"
                 onChange={handleFileAdd}
               />
-              <Video size={20} className="mb-1 text-red-500" /> Record Video
+              <Video size={24} className="mb-2 text-red-600" />
+              <span className="text-xs font-bold text-red-800">
+                Record Video
+              </span>
+            </label>
+
+            {/* 3. UPLOAD FROM GALLERY (No Capture Attribute) */}
+            <label className="col-span-2 flex items-center justify-center gap-3 p-3 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50 hover:bg-gray-100 cursor-pointer transition-all active:scale-95">
+              <input
+                type="file"
+                accept="image/*,video/*,audio/*"
+                multiple
+                className="hidden"
+                onChange={handleFileAdd}
+              />
+              <div className="bg-white p-2 rounded-full shadow-sm">
+                <UploadCloud size={20} className="text-gray-600" />
+              </div>
+              <div className="text-left">
+                <span className="text-sm font-bold text-gray-700 block">
+                  Upload from Gallery
+                </span>
+                <span className="text-[10px] text-gray-400">
+                  Photos, Videos, or Audio Files
+                </span>
+              </div>
             </label>
           </div>
+
+          {/* 4. AUDIO RECORDER */}
           <AudioRecorder onRecordingComplete={handleAudioAdd} />
+
+          {/* File Previews */}
           {files.length > 0 && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 pt-2">
               {files.map((f, i) => (
                 <div
                   key={i}
-                  className="bg-gray-100 text-xs px-2 py-1 rounded border flex gap-1"
+                  className="bg-gray-100 text-xs px-2 py-1 rounded border flex items-center gap-1 max-w-full"
                 >
-                  {f.name.slice(0, 10)}...{" "}
-                  <button type="button" onClick={() => removeFile(i)}>
+                  <span className="truncate max-w-[150px]">{f.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(i)}
+                    className="text-gray-400 hover:text-red-500"
+                  >
                     <X size={12} />
                   </button>
                 </div>
@@ -215,6 +249,7 @@ export default function ReportForm({
             </div>
           )}
         </div>
+        {/* ---------------------------- */}
 
         <div
           className={`p-3 rounded-lg flex items-center gap-3 text-sm font-medium border ${
@@ -285,18 +320,16 @@ export default function ReportForm({
               {/* PHONE WITH SEARCHABLE CODE */}
               {contactMethod === "PHONE" ? (
                 <div className="flex">
-                  {/* Custom Searchable Dropdown */}
                   <SearchableDropdown
                     options={countryList}
                     value={countryCode}
                     onChange={setCountryCode}
                     placeholder="+..."
                   />
-                  {/* Phone Input */}
                   <input
                     type="tel"
                     placeholder="Phone Number"
-                    className="flex-1 p-2 border border-l-0 rounded-r-lg text-sm outline-none focus:ring-1 focus:ring-blue-500"
+                    className="flex-1 p-2 border border-l-0 rounded-r-lg text-sm outline-none"
                     value={contactValue}
                     onChange={(e) => setContactValue(e.target.value)}
                     required
@@ -400,7 +433,7 @@ export default function ReportForm({
               Involve Law Enforcement?
             </span>
             <p className="text-xs text-gray-500 mt-1">
-              Check <b>only</b> if you are in immediate danger.
+              Check <b>only</b> if you wish to notify the police immediately.
             </p>
           </div>
         </div>
@@ -408,17 +441,15 @@ export default function ReportForm({
         <button
           type="submit"
           disabled={isSubmitting || !location}
-          className={`w-full text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg mt-4 transition-all
-                ${
-                  isSubmitting || !location
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-blue-600 hover:bg-blue-700"
-                }`}
+          className={`w-full text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg mt-4 transition-all ${
+            isSubmitting || !location
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-blue-600 hover:bg-blue-700"
+          }`}
         >
           <Send size={20} />
           {isSubmitting
-            ? // Smart Loading Text
-              files.some((f) => f.type.startsWith("video"))
+            ? files.some((f) => f.type.startsWith("video"))
               ? "Uploading Video... (Please Wait)"
               : "Sending Report..."
             : location
