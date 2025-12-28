@@ -1,20 +1,29 @@
 import { useState } from "react";
 import { Routes, Route } from "react-router-dom";
 import axios from "axios";
-import { ShieldAlert, XCircle, CheckCircle, RotateCcw } from "lucide-react";
+import {
+  ShieldAlert,
+  XCircle,
+  CheckCircle,
+  RotateCcw,
+  Globe,
+} from "lucide-react";
 import CategorySelect from "./components/CategorySelect";
 import ReportForm from "./components/ReportForm";
 import ResponderLogin from "./components/ResponderLogin";
-import ResponderRegister from "./components/ResponderRegister"; // New Import
+import ResponderRegister from "./components/ResponderRegister";
 import AdminDashboard from "./components/AdminDashboard";
 import SafetyAdvisor from "./components/SafetyAdvisor";
 import SuperAdmin from "./components/SuperAdmin";
-import { API_URL } from "./config"; // (Check path based on file location)
+import { API_URL } from "./config";
 
 function VictimApp() {
   const [step, setStep] = useState(1);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // GLOBAL LANGUAGE STATE
+  const [lang, setLang] = useState("en");
 
   const quickExit = () => (window.location.href = "https://www.google.com");
 
@@ -63,18 +72,32 @@ function VictimApp() {
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
       <div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden min-h-[500px] flex flex-col relative">
+        {/* HEADER */}
         <div className="bg-slate-900 p-4 flex justify-between items-center text-white">
           <div className="flex items-center gap-2">
             <ShieldAlert className="text-red-500" />
             <span className="font-bold text-lg tracking-wide">Cry-out</span>
           </div>
-          <button
-            onClick={quickExit}
-            className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2 px-4 rounded-full flex items-center gap-1"
-          >
-            <XCircle size={14} /> QUICK EXIT
-          </button>
+
+          <div className="flex gap-2">
+            {/* LANGUAGE TOGGLE */}
+            <button
+              onClick={() => setLang(lang === "en" ? "fr" : "en")}
+              className="text-xs font-bold text-slate-300 hover:text-white bg-slate-800 px-3 py-2 rounded-full border border-slate-700 transition-colors flex items-center gap-1"
+            >
+              <Globe size={14} /> {lang === "en" ? "FR" : "EN"}
+            </button>
+
+            {/* EXIT BUTTON */}
+            <button
+              onClick={quickExit}
+              className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2 px-4 rounded-full flex items-center gap-1 shadow-lg shadow-red-900/20"
+            >
+              <XCircle size={14} /> EXIT
+            </button>
+          </div>
         </div>
+
         <div className="p-6 flex-1 flex flex-col justify-center">
           {step === 1 && (
             <CategorySelect
@@ -82,6 +105,8 @@ function VictimApp() {
                 setSelectedCategory(cat);
                 setStep(2);
               }}
+              lang={lang}
+              setLang={setLang}
             />
           )}
           {step === 2 && (
@@ -90,6 +115,8 @@ function VictimApp() {
               onSubmit={handleSubmit}
               onBack={() => setStep(1)}
               isSubmitting={isSubmitting}
+              lang={lang}
+              setLang={setLang}
             />
           )}
           {step === 3 && (

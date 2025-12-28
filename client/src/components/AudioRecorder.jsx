@@ -1,11 +1,15 @@
 import { useState, useRef } from "react";
 import { Mic, Square, Trash2, Play } from "lucide-react";
+import { translations } from "../utils/translations"; // Import Dictionary
 
-export default function AudioRecorder({ onRecordingComplete }) {
+export default function AudioRecorder({ onRecordingComplete, lang = "en" }) {
+  // Accept lang prop
   const [isRecording, setIsRecording] = useState(false);
   const [audioURL, setAudioURL] = useState(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+
+  const t = translations[lang]; // Get current language text
 
   const startRecording = async () => {
     try {
@@ -19,25 +23,21 @@ export default function AudioRecorder({ onRecordingComplete }) {
         }
       };
 
-     mediaRecorderRef.current.onstop = () => {
-       // Only process if we have data
-       if (audioChunksRef.current.length === 0) return;
+      mediaRecorderRef.current.onstop = () => {
+        if (audioChunksRef.current.length === 0) return;
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: "audio/webm",
+        });
+        const audioFile = new File(
+          [audioBlob],
+          `voice_note_${Date.now()}.webm`,
+          { type: "audio/webm" }
+        );
 
-       const audioBlob = new Blob(audioChunksRef.current, {
-         type: "audio/webm",
-       });
-
-       // Ensure the file has a name and type
-       const audioFile = new File(
-         [audioBlob],
-         `voice_note_${Date.now()}.webm`,
-         { type: "audio/webm" }
-       );
-
-       onRecordingComplete(audioFile);
-       const url = URL.createObjectURL(audioBlob);
-       setAudioURL(url);
-     };
+        onRecordingComplete(audioFile);
+        const url = URL.createObjectURL(audioBlob);
+        setAudioURL(url);
+      };
 
       mediaRecorderRef.current.start();
       setIsRecording(true);
@@ -51,7 +51,6 @@ export default function AudioRecorder({ onRecordingComplete }) {
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      // Stop all tracks to release microphone
       mediaRecorderRef.current.stream
         .getTracks()
         .forEach((track) => track.stop());
@@ -60,11 +59,11 @@ export default function AudioRecorder({ onRecordingComplete }) {
 
   const resetRecording = () => {
     setAudioURL(null);
-    onRecordingComplete(null); // Clear from parent
+    onRecordingComplete(null);
   };
 
   return (
-    <div className="border border-blue-100 bg-blue-50 rounded-lg p-3 flex items-center justify-between">
+    <div className="border border-blue-100 bg-blue-50/50 rounded-xl p-3 flex items-center justify-between">
       {!audioURL ? (
         <>
           {isRecording ? (
@@ -74,12 +73,12 @@ export default function AudioRecorder({ onRecordingComplete }) {
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
               </span>
               <span className="text-sm text-red-600 font-bold animate-pulse">
-                Recording...
+                {t.rec_on}
               </span>
               <button
                 type="button"
                 onClick={stopRecording}
-                className="ml-auto bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
+                className="ml-auto bg-red-500 text-white p-2 rounded-full hover:bg-red-600 shadow-md"
               >
                 <Square size={16} fill="white" />
               </button>
@@ -88,10 +87,10 @@ export default function AudioRecorder({ onRecordingComplete }) {
             <button
               type="button"
               onClick={startRecording}
-              className="flex items-center gap-2 text-blue-700 font-semibold w-full"
+              className="flex items-center gap-2 text-blue-700 font-bold text-sm w-full justify-center py-2"
             >
               <Mic size={20} />
-              <span>Tap to Record Audio</span>
+              <span>{t.rec_tap}</span>
             </button>
           )}
         </>
@@ -101,7 +100,7 @@ export default function AudioRecorder({ onRecordingComplete }) {
             <Play size={16} fill="currentColor" />
           </div>
           <span className="text-sm text-blue-900 font-medium flex-1">
-            Voice Note Ready
+            {t.rec_ready}
           </span>
           <button
             type="button"

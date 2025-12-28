@@ -51,16 +51,6 @@ export default function SuperAdmin() {
     "Other",
   ];
 
-  useEffect(() => {
-    const password = prompt("Enter Super Admin Password:");
-    if (password === "master123") {
-      setAuth(true);
-      fetchData();
-    } else {
-      window.location.href = "/";
-    }
-  }, []);
-
   const fetchData = async () => {
     try {
       const [orgRes, caseRes] = await Promise.all([
@@ -73,6 +63,18 @@ export default function SuperAdmin() {
       console.error(err);
     }
   };
+
+  useEffect(() => {
+    const password = prompt("Enter Super Admin Password:");
+    if (password === "master123") {
+      setAuth(true);
+      fetchData();
+    } else {
+      window.location.href = "/";
+    }
+  }, []);
+
+  
 
   // --- ORG ACTIONS ---
   const updateStatus = async (id, status) => {

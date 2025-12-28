@@ -13,20 +13,22 @@ import {
   Calendar,
   Image as ImageIcon,
   UploadCloud,
+  Globe,
 } from "lucide-react";
 import AudioRecorder from "./AudioRecorder";
 import SearchableDropdown from "./SearchableDropdown";
+import { translations } from "../utils/translations"; // Import Dictionary
 
-export default function ReportForm({
-  onSubmit,
-  onBack,
-  selectedCategory,
-  isSubmitting,
-}) {
+//  function signature to accept lang/setLang props
+export default function ReportForm({ onSubmit, onBack, selectedCategory, isSubmitting, lang, setLang }) {
   const [location, setLocation] = useState(null);
   const [locationError, setLocationError] = useState(false);
   const [consent, setConsent] = useState(false);
   const [files, setFiles] = useState([]);
+  
+  // Use the prop
+  const t = translations[lang]; 
+
 
   // Contact State
   const [contactMethod, setContactMethod] = useState("NONE");
@@ -38,7 +40,6 @@ export default function ReportForm({
   const [safeVoicemail, setSafeVoicemail] = useState(false);
   const [requestImmediate, setRequestImmediate] = useState(false);
 
-  // --- 1. FETCH COUNTRY CODES ---
   useEffect(() => {
     const fetchCodes = async () => {
       try {
@@ -53,19 +54,14 @@ export default function ReportForm({
             dial_code: c.idd.root + (c.idd.suffixes ? c.idd.suffixes[0] : ""),
           }))
           .sort((a, b) => a.name.localeCompare(b.name));
-
         setCountryList(formatted);
       } catch (err) {
-        setCountryList([
-          { name: "Cameroon", dial_code: "+237" },
-          { name: "USA", dial_code: "+1" },
-        ]);
+        setCountryList([{ name: "Cameroon", dial_code: "+237" }]);
       }
     };
     fetchCodes();
   }, []);
 
-  // --- 2. AUTO LOCATION ---
   useEffect(() => {
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
@@ -80,10 +76,8 @@ export default function ReportForm({
   }, []);
 
   const handleFileAdd = (e) => {
-    if (e.target.files) {
-      // Limit file size check could go here
+    if (e.target.files)
       setFiles((prev) => [...prev, ...Array.from(e.target.files)]);
-    }
   };
   const handleAudioAdd = (file) => {
     if (file) setFiles((prev) => [...prev, file]);
@@ -94,22 +88,17 @@ export default function ReportForm({
   const handleSubmitWithLoc = (e) => {
     e.preventDefault();
     if (!location) {
-      alert("Location is required.");
+      alert(t.loc_fail);
       return;
     }
 
     let finalContactValue = contactValue;
-    if (contactMethod === "PHONE") {
+    if (contactMethod === "PHONE")
       finalContactValue = `${countryCode} ${contactValue}`;
-    }
 
-    // Determine Time Logic
     let finalTime = null;
-    if (requestImmediate) {
-      finalTime = new Date().toISOString();
-    } else if (safeTime) {
-      finalTime = safeTime;
-    }
+    if (requestImmediate) finalTime = new Date().toISOString();
+    else if (safeTime) finalTime = safeTime;
 
     const contactData = {
       method: contactMethod,
@@ -123,57 +112,50 @@ export default function ReportForm({
 
   return (
     <div className="space-y-4 animate-slide-up pb-10">
-      <div className="flex items-center gap-2 mb-2">
-        <button
-          onClick={onBack}
-          className="text-gray-400 text-sm hover:text-gray-600 font-medium"
-        >
-          ← Back
-        </button>
-        <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">
-          {selectedCategory}
-        </span>
+      {/* HEADER WITH LANGUAGE TOGGLE */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onBack}
+            className="text-gray-400 text-sm hover:text-gray-600 font-medium"
+          >
+            ←
+          </button>
+          <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">
+            {selectedCategory}
+          </span>
+        </div>
+       
       </div>
 
       <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
         <div className="flex items-center gap-2 text-blue-800 text-sm font-bold mb-1">
-          <ShieldAlert size={16} /> Safety Tips
+          <ShieldAlert size={16} /> {t.safety_title}
         </div>
         <p className="text-xs text-blue-700 leading-relaxed opacity-90">
-          {selectedCategory === "Domestic Violence"
-            ? "Stay near an exit. Keep phone silent."
-            : "Trust your instincts. If unsafe, leave."}
+          {selectedCategory === "Domestic Violence" ? t.dv_tip : t.gen_tip}
         </p>
       </div>
 
       <form onSubmit={handleSubmitWithLoc} className="space-y-4">
-        {/* Description */}
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wide">
-            <Info size={14} /> Report Guide
+            <Info size={14} /> {t.guide_title}
           </div>
           <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-200">
-            Please mention: <b>Names</b>, <b>Relationship</b>, and <b>Dates</b>{" "}
-            if possible.
+            {t.guide_text}
           </div>
           <textarea
             name="description"
             rows="4"
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none text-sm"
-            placeholder="Describe the incident here...
-Or Record an audio ..."
+            className="w-full p-3 border border-gray-300 rounded-lg text-sm"
+            placeholder={t.placeholder}
           ></textarea>
         </div>
 
-        {/* --- IMPROVED MEDIA TOOLS --- */}
         <div className="space-y-3 border-t border-gray-100 pt-4">
-          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-            Evidence Collection
-          </h3>
-
           <div className="grid grid-cols-2 gap-3">
-            {/* 1. LIVE PHOTO (Forces Camera) */}
-            <label className="flex flex-col items-center justify-center p-4 border rounded-xl bg-blue-50/50 hover:bg-blue-100 cursor-pointer transition-all active:scale-95 text-center">
+            <label className="flex flex-col items-center justify-center p-4 border rounded-xl bg-blue-50/50 hover:bg-blue-100 cursor-pointer">
               <input
                 type="file"
                 accept="image/*"
@@ -182,13 +164,9 @@ Or Record an audio ..."
                 onChange={handleFileAdd}
               />
               <Camera size={24} className="mb-2 text-blue-600" />
-              <span className="text-xs font-bold text-blue-800">
-                Take Photo
-              </span>
+              <span className="text-xs font-bold text-blue-800">{t.photo}</span>
             </label>
-
-            {/* 2. LIVE VIDEO (Forces Camera) */}
-            <label className="flex flex-col items-center justify-center p-4 border rounded-xl bg-red-50/50 hover:bg-red-100 cursor-pointer transition-all active:scale-95 text-center">
+            <label className="flex flex-col items-center justify-center p-4 border rounded-xl bg-red-50/50 hover:bg-red-100 cursor-pointer">
               <input
                 type="file"
                 accept="video/*"
@@ -197,13 +175,9 @@ Or Record an audio ..."
                 onChange={handleFileAdd}
               />
               <Video size={24} className="mb-2 text-red-600" />
-              <span className="text-xs font-bold text-red-800">
-                Record Video
-              </span>
+              <span className="text-xs font-bold text-red-800">{t.video}</span>
             </label>
-
-            {/* 3. UPLOAD FROM GALLERY (No Capture Attribute) */}
-            <label className="col-span-2 flex items-center justify-center gap-3 p-3 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50 hover:bg-gray-100 cursor-pointer transition-all active:scale-95">
+            <label className="col-span-2 flex items-center justify-center gap-3 p-3 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50 hover:bg-gray-100 cursor-pointer">
               <input
                 type="file"
                 accept="image/*,video/*,audio/*"
@@ -216,25 +190,21 @@ Or Record an audio ..."
               </div>
               <div className="text-left">
                 <span className="text-sm font-bold text-gray-700 block">
-                  Upload from Gallery
+                  {t.gallery}
                 </span>
                 <span className="text-[10px] text-gray-400">
-                  Photos, Videos, or Audio Files
+                  {t.gallery_sub}
                 </span>
               </div>
             </label>
           </div>
-
-          {/* 4. AUDIO RECORDER */}
-          <AudioRecorder onRecordingComplete={handleAudioAdd} />
-
-          {/* File Previews */}
+          <AudioRecorder onRecordingComplete={handleAudioAdd} lang={lang}/>
           {files.length > 0 && (
             <div className="flex flex-wrap gap-2 pt-2">
               {files.map((f, i) => (
                 <div
                   key={i}
-                  className="bg-gray-100 text-xs px-2 py-1 rounded border flex items-center gap-1 max-w-full"
+                  className="bg-gray-100 text-xs px-2 py-1 rounded border flex items-center gap-1"
                 >
                   <span className="truncate max-w-[150px]">{f.name}</span>
                   <button
@@ -249,7 +219,6 @@ Or Record an audio ..."
             </div>
           )}
         </div>
-        {/* ---------------------------- */}
 
         <div
           className={`p-3 rounded-lg flex items-center gap-3 text-sm font-medium border ${
@@ -261,63 +230,56 @@ Or Record an audio ..."
           {location ? (
             <>
               <Check size={20} className="text-green-600" />
-              <span>Location Automatically Secured</span>
+              <span>{t.loc_secure}</span>
             </>
           ) : (
             <>
               <MapPin size={20} className="animate-pulse" />
-              <span>
-                {locationError
-                  ? "Location Required. Allow GPS."
-                  : "Acquiring GPS..."}
-              </span>
+              <span>{locationError ? t.loc_fail : t.loc_wait}</span>
             </>
           )}
         </div>
 
         <div className="border-t border-gray-100 pt-4 space-y-3">
-          <h3 className="text-sm font-bold text-gray-700">
-            Can we contact you?
-          </h3>
+          <h3 className="text-sm font-bold text-gray-700">{t.contact_title}</h3>
           <div className="flex gap-2">
             <button
               type="button"
               onClick={() => setContactMethod("PHONE")}
               className={`flex-1 py-2 text-xs font-bold rounded-lg border ${
                 contactMethod === "PHONE"
-                  ? "bg-blue-600 text-white border-blue-600"
+                  ? "bg-blue-600 text-white"
                   : "bg-white text-gray-500"
               }`}
             >
-              Phone
+              {t.phone}
             </button>
             <button
               type="button"
               onClick={() => setContactMethod("EMAIL")}
               className={`flex-1 py-2 text-xs font-bold rounded-lg border ${
                 contactMethod === "EMAIL"
-                  ? "bg-blue-600 text-white border-blue-600"
+                  ? "bg-blue-600 text-white"
                   : "bg-white text-gray-500"
               }`}
             >
-              Email
+              {t.email}
             </button>
             <button
               type="button"
               onClick={() => setContactMethod("NONE")}
               className={`flex-1 py-2 text-xs font-bold rounded-lg border ${
                 contactMethod === "NONE"
-                  ? "bg-gray-800 text-white border-gray-800"
+                  ? "bg-gray-800 text-white"
                   : "bg-white text-gray-500"
               }`}
             >
-              No
+              {t.no}
             </button>
           </div>
 
           {contactMethod !== "NONE" && (
             <div className="space-y-4 bg-gray-50 p-4 rounded-lg border border-gray-200 animate-fade-in">
-              {/* PHONE WITH SEARCHABLE CODE */}
               {contactMethod === "PHONE" ? (
                 <div className="flex">
                   <SearchableDropdown
@@ -328,7 +290,7 @@ Or Record an audio ..."
                   />
                   <input
                     type="tel"
-                    placeholder="Phone Number"
+                    placeholder={t.safe_phone}
                     className="flex-1 p-2 border border-l-0 rounded-r-lg text-sm outline-none"
                     value={contactValue}
                     onChange={(e) => setContactValue(e.target.value)}
@@ -338,7 +300,7 @@ Or Record an audio ..."
               ) : (
                 <input
                   type="email"
-                  placeholder="Safe Email Address"
+                  placeholder={t.safe_email}
                   className="w-full p-2 border rounded text-sm"
                   value={contactValue}
                   onChange={(e) => setContactValue(e.target.value)}
@@ -364,7 +326,7 @@ Or Record an audio ..."
                   htmlFor="immediate"
                   className="text-xs font-bold cursor-pointer"
                 >
-                  Request Immediate Callback?
+                  {t.immediate}
                 </label>
               </div>
 
@@ -377,9 +339,7 @@ Or Record an audio ..."
               >
                 <label className="text-xs text-gray-500 block mb-1 flex items-center gap-1">
                   <Calendar size={12} />{" "}
-                  {requestImmediate
-                    ? "We will contact you ASAP"
-                    : "Select best date & time to call:"}
+                  {requestImmediate ? t.asap : t.schedule}
                 </label>
                 <input
                   type="datetime-local"
@@ -399,7 +359,7 @@ Or Record an audio ..."
                     onChange={(e) => setSafeVoicemail(e.target.checked)}
                   />
                   <label htmlFor="vm" className="text-xs text-gray-600">
-                    Safe to leave voicemail?
+                    {t.voicemail}
                   </label>
                 </div>
               )}
@@ -430,11 +390,9 @@ Or Record an audio ..."
                 size={16}
                 className={consent ? "text-red-600" : "text-gray-400"}
               />{" "}
-              Involve Law Enforcement?
+              {t.police_title}
             </span>
-            <p className="text-xs text-gray-500 mt-1">
-              Check <b>only</b> if you wish to notify the police immediately.
-            </p>
+            <p className="text-xs text-gray-500 mt-1">{t.police_text}</p>
           </div>
         </div>
 
@@ -450,11 +408,11 @@ Or Record an audio ..."
           <Send size={20} />
           {isSubmitting
             ? files.some((f) => f.type.startsWith("video"))
-              ? "Uploading Video... (Please Wait)"
-              : "Sending Report..."
+              ? t.uploading
+              : t.sending
             : location
-            ? "Submit Report"
-            : "Waiting for GPS..."}
+            ? t.submit
+            : t.wait_gps}
         </button>
       </form>
     </div>
