@@ -2,4 +2,4 @@
 export const API_URL =
   import.meta.env.MODE === "development"
     ? "http://localhost:3001"
-    : "https://cry-out-backend.onrender.com" // <--- Replace with your actual Render URL
+    : "https://cry-out-backend.onrender.com" 
