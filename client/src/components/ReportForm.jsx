@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import {
   MapPin,
@@ -12,6 +12,7 @@ import {
   Siren,
   Calendar,
   UploadCloud,
+  RefreshCw,
 } from "lucide-react";
 import AudioRecorder from "./AudioRecorder";
 import SearchableDropdown from "./SearchableDropdown";
@@ -26,6 +27,7 @@ export default function ReportForm({
 }) {
   const [location, setLocation] = useState(null);
   const [locationError, setLocationError] = useState(false);
+  const [isLocating, setIsLocating] = useState(false); // Track loading state for manual retry
   const [consent, setConsent] = useState(false);
   const [files, setFiles] = useState([]);
 
@@ -64,26 +66,40 @@ export default function ReportForm({
     fetchCodes();
   }, []);
 
-  // --- ULTRA ACCURATE LOCATION ---
-  useEffect(() => {
+  // --- REUSABLE GPS FUNCTION ---
+  const getLocation = useCallback(() => {
+    setLocation(null);
+    setLocationError(false);
+    setIsLocating(true);
+
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
           setLocationError(false);
+          setIsLocating(false);
         },
         (err) => {
           console.error("GPS Error", err);
           setLocationError(true);
+          setIsLocating(false);
         },
         {
-          enableHighAccuracy: true, // Force GPS Hardware
-          timeout: 20000, // Wait up to 20s for a satellite lock
-          maximumAge: 0, // Do not use cached position
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0,
         }
       );
-    } else setLocationError(true);
+    } else {
+      setLocationError(true);
+      setIsLocating(false);
+    }
   }, []);
+
+  // Run once on mount
+  useEffect(() => {
+    getLocation();
+  }, [getLocation]);
 
   const handleFileAdd = (e) => {
     if (e.target.files)
@@ -95,7 +111,7 @@ export default function ReportForm({
   const removeFile = (idx) =>
     setFiles((prev) => prev.filter((_, i) => i !== idx));
 
-  
+  // --- SUBMIT LOGIC ---
   const handleSubmitWithLoc = (e) => {
     e.preventDefault();
     if (!location) {
@@ -107,10 +123,9 @@ export default function ReportForm({
     if (contactMethod === "PHONE")
       finalContactValue = `${countryCode} ${contactValue}`;
 
-    //  Send a clear string value or null
     let finalTime = null;
     if (requestImmediate) {
-      finalTime = "ASAP"; // Explicit string for backend
+      finalTime = "ASAP";
     } else if (safeTime) {
       finalTime = safeTime;
     }
@@ -123,7 +138,6 @@ export default function ReportForm({
       immediateHelp: requestImmediate,
     };
 
-    // Pass everything up
     onSubmit(e, location, consent, files, contactData);
   };
 
@@ -235,25 +249,42 @@ export default function ReportForm({
           )}
         </div>
 
+        {/* --- LOCATION STATUS WITH REFRESH BUTTON --- */}
         <div
-          className={`p-3 rounded-lg flex items-center gap-3 text-sm font-medium border ${
+          className={`p-1 rounded-lg border transition-colors ${
             location
               ? "bg-green-50 border-green-200 text-green-800"
               : "bg-red-50 border-red-200 text-red-800"
           }`}
         >
           {location ? (
-            <>
+            <div className="flex items-center gap-3 p-2">
               <Check size={20} className="text-green-600" />
               <span>{t.loc_secure}</span>
-            </>
+            </div>
           ) : (
-            <>
-              <MapPin size={20} className="animate-pulse" />
-              <span>{locationError ? t.loc_fail : t.loc_wait}</span>
-            </>
+            <button
+              type="button"
+              onClick={getLocation}
+              disabled={isLocating}
+              className="flex items-center gap-3 w-full p-2 text-left hover:bg-red-100/50 rounded-lg transition-colors"
+            >
+              {isLocating ? (
+                <MapPin size={20} className="animate-bounce" />
+              ) : (
+                <RefreshCw size={20} />
+              )}
+              <span className="flex-1 font-bold text-sm">
+                {isLocating
+                  ? t.loc_wait
+                  : locationError
+                  ? "GPS Failed. Tap to Retry"
+                  : "Acquiring GPS..."}
+              </span>
+            </button>
           )}
         </div>
+        {/* ------------------------------------------- */}
 
         <div className="border-t border-gray-100 pt-4 space-y-3">
           <h3 className="text-sm font-bold text-gray-700">{t.contact_title}</h3>
