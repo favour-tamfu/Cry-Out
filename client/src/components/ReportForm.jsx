@@ -11,24 +11,25 @@ import {
   Info,
   Siren,
   Calendar,
-  Image as ImageIcon,
   UploadCloud,
-  Globe,
 } from "lucide-react";
 import AudioRecorder from "./AudioRecorder";
 import SearchableDropdown from "./SearchableDropdown";
-import { translations } from "../utils/translations"; // Import Dictionary
+import { translations } from "../utils/translations";
 
-//  function signature to accept lang/setLang props
-export default function ReportForm({ onSubmit, onBack, selectedCategory, isSubmitting, lang, setLang }) {
+export default function ReportForm({
+  onSubmit,
+  onBack,
+  selectedCategory,
+  isSubmitting,
+  lang,
+}) {
   const [location, setLocation] = useState(null);
   const [locationError, setLocationError] = useState(false);
   const [consent, setConsent] = useState(false);
   const [files, setFiles] = useState([]);
-  
-  // Use the prop
-  const t = translations[lang]; 
 
+  const t = translations[lang];
 
   // Contact State
   const [contactMethod, setContactMethod] = useState("NONE");
@@ -40,6 +41,7 @@ export default function ReportForm({ onSubmit, onBack, selectedCategory, isSubmi
   const [safeVoicemail, setSafeVoicemail] = useState(false);
   const [requestImmediate, setRequestImmediate] = useState(false);
 
+  // --- FETCH COUNTRY CODES ---
   useEffect(() => {
     const fetchCodes = async () => {
       try {
@@ -62,6 +64,7 @@ export default function ReportForm({ onSubmit, onBack, selectedCategory, isSubmi
     fetchCodes();
   }, []);
 
+  // --- ULTRA ACCURATE LOCATION ---
   useEffect(() => {
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
@@ -69,8 +72,15 @@ export default function ReportForm({ onSubmit, onBack, selectedCategory, isSubmi
           setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
           setLocationError(false);
         },
-        () => setLocationError(true),
-        { enableHighAccuracy: true }
+        (err) => {
+          console.error("GPS Error", err);
+          setLocationError(true);
+        },
+        {
+          enableHighAccuracy: true, // Force GPS Hardware
+          timeout: 20000, // Wait up to 20s for a satellite lock
+          maximumAge: 0, // Do not use cached position
+        }
       );
     } else setLocationError(true);
   }, []);
@@ -85,6 +95,7 @@ export default function ReportForm({ onSubmit, onBack, selectedCategory, isSubmi
   const removeFile = (idx) =>
     setFiles((prev) => prev.filter((_, i) => i !== idx));
 
+  
   const handleSubmitWithLoc = (e) => {
     e.preventDefault();
     if (!location) {
@@ -96,9 +107,13 @@ export default function ReportForm({ onSubmit, onBack, selectedCategory, isSubmi
     if (contactMethod === "PHONE")
       finalContactValue = `${countryCode} ${contactValue}`;
 
+    //  Send a clear string value or null
     let finalTime = null;
-    if (requestImmediate) finalTime = new Date().toISOString();
-    else if (safeTime) finalTime = safeTime;
+    if (requestImmediate) {
+      finalTime = "ASAP"; // Explicit string for backend
+    } else if (safeTime) {
+      finalTime = safeTime;
+    }
 
     const contactData = {
       method: contactMethod,
@@ -107,12 +122,13 @@ export default function ReportForm({ onSubmit, onBack, selectedCategory, isSubmi
       safeToVoicemail: safeVoicemail,
       immediateHelp: requestImmediate,
     };
+
+    // Pass everything up
     onSubmit(e, location, consent, files, contactData);
   };
 
   return (
     <div className="space-y-4 animate-slide-up pb-10">
-      {/* HEADER WITH LANGUAGE TOGGLE */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <button
@@ -125,7 +141,6 @@ export default function ReportForm({ onSubmit, onBack, selectedCategory, isSubmi
             {selectedCategory}
           </span>
         </div>
-       
       </div>
 
       <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
@@ -198,7 +213,7 @@ export default function ReportForm({ onSubmit, onBack, selectedCategory, isSubmi
               </div>
             </label>
           </div>
-          <AudioRecorder onRecordingComplete={handleAudioAdd} lang={lang}/>
+          <AudioRecorder onRecordingComplete={handleAudioAdd} lang={lang} />
           {files.length > 0 && (
             <div className="flex flex-wrap gap-2 pt-2">
               {files.map((f, i) => (
